@@ -38,6 +38,7 @@ with System.BB.Threads;
 with System.BB.Threads.Queues;
 with System.BB.Board_Support;
 with System.BB.Time;
+with Memory_Protection;
 
 package body System.BB.Interrupts is
 
@@ -45,6 +46,7 @@ package body System.BB.Interrupts is
    use System.BB.CPU_Primitives.Multiprocessors;
    use System.BB.Threads;
    use System.BB.Time;
+   use Memory_Protection;
 
    ----------------
    -- Local data --
@@ -154,6 +156,7 @@ package body System.BB.Interrupts is
       Previous_Int    : constant Interrupt_ID :=
                           Interrupt_Being_Handled (CPU_Id);
       Prev_In_Interr  : constant Boolean := Self_Id.In_Interrupt;
+      Old_Enabled     : Boolean;
 
    begin
       --  Handle spurious interrupts, reported as No_Interrupt. If they must be
@@ -162,6 +165,8 @@ package body System.BB.Interrupts is
       if Interrupt = No_Interrupt then
          return;
       end if;
+
+      Set_CPU_Writable_Background_Region (True, Old_Enabled);
 
       --  Update execution time for the interrupted task
 
@@ -193,11 +198,13 @@ package body System.BB.Interrupts is
       Threads.Queues.Change_Priority (Self_Id, Int_Priority);
 
       CPU_Primitives.Enable_Interrupts (Int_Priority);
+      Set_CPU_Writable_Background_Region (False);
 
       --  Call the user handler
 
       Interrupt_Handlers_Table (Interrupt).all (Interrupt);
 
+      Set_CPU_Writable_Background_Region (True);
       CPU_Primitives.Disable_Interrupts;
 
       --  Update execution time for the interrupt. This must be done before
@@ -230,6 +237,7 @@ package body System.BB.Interrupts is
       --  Switch back to previous priority
 
       Board_Support.Set_Current_Priority (Caller_Priority);
+      Set_CPU_Writable_Background_Region (Old_Enabled);
    end Interrupt_Wrapper;
 
    ----------------------------

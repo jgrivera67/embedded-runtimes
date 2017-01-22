@@ -33,119 +33,93 @@ with Interfaces; use Interfaces;
 with Interfaces.Bit_Types; use Interfaces.Bit_Types;
 
 --
---  @summary Parent package for rI/O egister definitions for the Kinetis K64F
---  (ARM Cortex M4F) microcontrollers from NXP.
+--  @summary Parent package for rI/O egister definitions for the Kinetis KL28Z
+--  (ARM Cortex M0+) microcontrollers from NXP.
 --
-package Kinetis_K64F is
+package Kinetis_KL28Z is
    pragma Preelaborate;
 
    type Bytes_Array is array (Positive range <>) of Byte;
-   type Words_Array is array (Positive range <>) of Word;
 
    subtype Two_Bits is UInt2;
    subtype Three_Bits is UInt3;
    subtype Four_Bits is UInt4;
    subtype Five_Bits is UInt5;
    subtype Six_Bits is UInt6;
-   subtype Seven_Bits is UInt7;
-   subtype Fifteen_Bits is UInt15;
    subtype Half_Word is Unsigned_16;
-   subtype Twenty_Seven_Bits is UInt27;
 
    type External_Interrupt_Type is
-     (DMA0_IRQ,
-      DMA1_IRQ,
-      DMA2_IRQ,
-      DMA3_IRQ,
-      DMA4_IRQ,
-      DMA5_IRQ,
-      DMA6_IRQ,
-      DMA7_IRQ,
-      DMA8_IRQ,
-      DMA9_IRQ,
-      DMA10_IRQ,
-      DMA11_IRQ,
-      DMA12_IRQ,
-      DMA13_IRQ,
-      DMA14_IRQ,
-      DMA15_IRQ,
-      DMA_Error_IRQ,
-      MCM_IRQ,
-      FTFE_IRQ,
-      Read_Collision_IRQ,
-      LVD_LVW_IRQ,
-      LLWU_IRQ,
-      WDOG_EWM_IRQ,
-      RNG_IRQ,
-      I2C0_IRQ,
-      I2C1_IRQ,
-      SPI0_IRQ,
-      SPI1_IRQ,
-      I2S0_Tx_IRQ,
-      I2S0_Rx_IRQ,
-      UART0_LON_IRQ,
-      UART0_RX_TX_IRQ,
-      UART0_ERR_IRQ,
-      UART1_RX_TX_IRQ,
-      UART1_ERR_IRQ,
-      UART2_RX_TX_IRQ,
-      UART2_ERR_IRQ,
-      UART3_RX_TX_IRQ,
-      UART3_ERR_IRQ,
-      ADC0_IRQ,
-      CMP0_IRQ,
-      CMP1_IRQ,
-      FTM0_IRQ,
-      FTM1_IRQ,
-      FTM2_IRQ,
-      CMT_IRQ,
-      RTC_IRQ,
-      RTC_Seconds_IRQ,
-      PIT0_IRQ,
-      PIT1_IRQ,
-      PIT2_IRQ,
-      PIT3_IRQ,
-      PDB0_IRQ,
-      USB0_IRQ,
-      USBDCD_IRQ,
-      Reserved71_IRQ,
-      DAC0_IRQ,
-      MCG_IRQ,
-      LPTMR0_IRQ,
+     (DMA0_4_IRQ,
+      DMA1_5_IRQ,
+      DMA2_6_IRQ,
+      DMA3_7_IRQ,
+      CTI0_DMA0_Error_IRQ,
+      FLEXIO0_IRQ,
+      TPM0_IRQ,
+      TPM1_IRQ,
+      TPM2_IRQ,
+      LPIT0_IRQ,
+      LPSPI0_IRQ,
+      LPSPI1_IRQ,
+      LPUART0_IRQ,
+      LPUART1_IRQ,
+      LPI2C0_IRQ,
+      LPI2C1_IRQ,
+      Reserved32_IRQ,
       PORTA_IRQ,
       PORTB_IRQ,
       PORTC_IRQ,
       PORTD_IRQ,
       PORTE_IRQ,
-      SWI_IRQ,
-      SPI2_IRQ,
-      UART4_RX_TX_IRQ,
-      UART4_ERR_IRQ,
-      UART5_RX_TX_IRQ,
-      UART5_ERR_IRQ,
-      CMP2_IRQ,
-      FTM3_IRQ,
-      DAC1_IRQ,
-      ADC1_IRQ,
-      I2C2_IRQ,
-      CAN0_ORed_Message_Buffer_IRQ,
-      CAN0_Bus_Off_IRQ,
-      CAN0_Error_IRQ,
-      CAN0_Tx_Warning_IRQ,
-      CAN0_Rx_Warning_IRQ,
-      CAN0_Wake_Up_IRQ,
-      SDHC_IRQ,
-      ENET_1588_Timer_IRQ,
-      ENET_Transmit_IRQ,
-      ENET_Receive_IRQ,
-      ENET_Error_IRQ);
+      LLWU0_IRQ,
+      I2S0_IRQ,
+      USB0_IRQ,
+      ADC0_IRQ,
+      LPTMR0_IRQ,
+      RTC_Seconds_IRQ,
+      INTMUX0_0_IRQ,
+      INTMUX0_1_IRQ,
+      INTMUX0_2_IRQ,
+      INTMUX0_3_IRQ,
+      LPTMR1_IRQ,
+      Reserved49_IRQ,
+      Reserved50_IRQ,
+      Reserved51_IRQ,
+      LPSPI2_IRQ,
+      LPUART2_IRQ,
+      EMVSIM0_IRQ,
+      LPI2C2_IRQ,
+      TSI0_IRQ,
+      PMC_IRQ,
+      FTFA_IRQ,
+      SCG_IRQ,
+      WDOG0_IRQ,
+      DAC0_IRQ,
+      TRNG_IRQ,
+      RCM_IRQHandler,
+      CMP0_IRQ,
+      CMP1_IRQ,
+      RTC_IRQ,
+      Reserved67_IRQ,
+      Reserved68_IRQ,
+      Reserved69_IRQ,
+      Reserved70_IRQ,
+      Reserved71_IRQ,
+      Reserved72_IRQ,
+      Reserved73_IRQ,
+      Reserved74_IRQ,
+      Reserved75_IRQ,
+      Reserved76_IRQ,
+      Reserved77_IRQ,
+      Reserved78_IRQ,
+      Reserved79_IRQ);
 
    pragma Compile_Time_Error
-     (External_Interrupt_Type'Pos (DMA0_IRQ) /= 0,
+     (External_Interrupt_Type'Pos (DMA0_4_IRQ) /= 0,
       "First IRQ number must be 0");
    pragma Compile_Time_Error
-     (External_Interrupt_Type'Pos (ENET_Error_IRQ) /=
-      System.BB.Parameters.Number_Of_Interrupt_ID - 2,
+     (External_Interrupt_Type'Pos (Reserved79_IRQ) /=
+      System.BB.Parameters.Number_Of_Interrupt_ID,
       "Last IRQ number is wrong");
 
-end Kinetis_K64F;
+end Kinetis_KL28Z;

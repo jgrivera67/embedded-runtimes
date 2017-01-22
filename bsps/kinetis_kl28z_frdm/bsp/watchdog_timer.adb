@@ -1,5 +1,5 @@
 --
---  Copyright (c) 2016-2017, German Rivera
+--  Copyright (c) 2016, German Rivera
 --  All rights reserved.
 --
 --  Redistribution and use in source and binary forms, with or without
@@ -24,15 +24,33 @@
 --  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 --  POSSIBILITY OF SUCH DAMAGE.
 --
+with Kinetis_KL25Z.SIM; use Kinetis_KL25Z;
 
-with Interfaces;
+--  package SIM renames Kinetis_KL25Z.SIM;
+package body Watchdog_Timer is
+   --
+   --  Compile-time flag to enable/disable firing to the watchdog timer
+   --
+   Watchdog_On : constant Boolean := False;
 
-package System.Text_IO.Extended is
-   pragma Preelaborate;
+   procedure Initialize is
+      COPC_Value : SIM.COPC_Type;
+   begin
+      if Watchdog_On then
+         --
+         --  Select Longest Watchdog Timeout
+         --
+         --  NOTE: The SIM'S COPC register can only be written once after a
+         --  Reset
+         --
+         COPC_Value := (COPT => 3, others => 0);
+      else
+         --  Disable the watchdog timer:
+         COPC_Value := (COPT => 0, others => 0);
+      end if;
 
-   procedure Put_String (Str : String);
+      SIM.Registers.COPC := COPC_Value;
 
-   procedure Print_Uint32_Hexadecimal (Value : Interfaces.Unsigned_32);
+   end Initialize;
 
-   procedure New_Line;
-end System.Text_IO.Extended;
+end Watchdog_Timer;

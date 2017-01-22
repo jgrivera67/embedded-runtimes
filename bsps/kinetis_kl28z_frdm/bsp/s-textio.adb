@@ -31,15 +31,15 @@
 
 --  Minimal version of Text_IO body for use on Kinetis K64F
 
-with Kinetis_K64F.UART;
-with Kinetis_K64F.SIM;
-with Kinetis_K64F.PORT;
+with Kinetis_KL25Z;
+with Kinetis_KL25Z.UART;
+with Kinetis_KL25Z.SIM;
+with Kinetis_KL25Z.PORT;
 with Interfaces.Bit_Types;
 with Microcontroller_Clocks;
-with Memory_Protection;
 
 package body System.Text_IO is
-   use Kinetis_K64F;
+   use Kinetis_KL25Z;
    use Interfaces.Bit_Types;
    use Microcontroller_Clocks;
 
@@ -58,14 +58,95 @@ package body System.Text_IO is
    ----------------
 
    procedure Initialize is
+      procedure Set_Baud_Rate;
+
+      procedure Set_Baud_Rate is
+         SBR_Field_Value : Positive range 1 .. 16#1FFF#;
+         SBR_Field_Encoded : UART.Encoded_Baud_Rate_Type with
+           Address => SBR_Field_Value'Address;
+         Uart_Clock : Positive;
+         Calculated_Baud_Rate : Positive;
+         Baud_Diff : Natural;
+         Baud_Diff2 : Natural;
+         OSR_Value : Natural;
+         C4_Value : UART.C4_Type;
+         C5_Value : UART.C5_Type;
+         BDH_Value : UART.BDH_Type;
+      begin
+         --
+         --  Calculate the first baud rate using the lowest OSR value possible.
+         --
+         Uart_Clock := Get_Pll_Frequency_Hz / 2;
+         SBR_Field_Value := Uart_Clock / (Baud_Rate * 4);
+         Calculated_Baud_Rate := Uart_Clock / (4 * SBR_Field_Value);
+         if Calculated_Baud_Rate > Baud_Rate then
+            Baud_Diff := Calculated_Baud_Rate - Baud_Rate;
+         else
+            Baud_Diff := Baud_Rate - Calculated_Baud_Rate;
+         end if;
+
+         OSR_Value := 4;
+
+         --  Select the best OSR value:
+         for I in 5 .. 32 loop
+            SBR_Field_Value := Uart_Clock / (Baud_Rate * I);
+            Calculated_Baud_Rate := Uart_Clock / (I * SBR_Field_Value);
+
+            if Calculated_Baud_Rate > Baud_Rate then
+               Baud_Diff2 := Calculated_Baud_Rate - Baud_Rate;
+            else
+               Baud_Diff2 := Baud_Rate - Calculated_Baud_Rate;
+            end if;
+
+            if Baud_Diff2 <= Baud_Diff then
+               Baud_Diff := Baud_Diff2;
+               OSR_Value := I;
+            end if;
+         end loop;
+
+         pragma Assert (Baud_Diff < (Baud_Rate / 100) * 3);
+
+         --
+         --  If the OSR is between 4x and 8x then both
+         --  edge sampling MUST be turned on.
+         --
+         if OSR_Value in  4 .. 8 then
+            C5_Value := UART.Uart0_Registers.C5;
+            C5_Value.BOTHEDGE := 1;
+            UART.Uart0_Registers.C5 := C5_Value;
+         end if;
+
+         --  Setup OSR value:
+         C4_Value := UART.Uart0_Registers.C4;
+         C4_Value.OSR := UInt5 (OSR_Value - 1);
+         UART.Uart0_Registers.C4 := C4_Value;
+         SBR_Field_Value := Uart_Clock / (Baud_Rate * OSR_Value);
+
+         --  Set baud rate in the device:
+         BDH_Value := UART.Uart0_Registers.BDH;
+         BDH_Value.SBR := SBR_Field_Encoded.High_Part;
+         UART.Uart0_Registers.BDH := BDH_Value;
+         UART.Uart0_Registers.BDL := SBR_Field_Encoded.Low_Part;
+      end Set_Baud_Rate;
+
+      C1_Value : UART.C1_Type;
       C2_Value : UART.C2_Type;
-      BDH_Value : UART.BDH_Type;
-      Calculated_SBR : Positive range 1 .. 16#1FFF#;
-      Encoded_Baud_Rate : UART.Encoded_Baud_Rate_Type with
-        Address => Calculated_SBR'Address;
+      SOPT2_Value : SIM.SOPT2_Type;
+      SCGC4_Value : SIM.SCGC4_Type;
+      PCR_Value : PORT.PCR_Type;
    begin
+      --
+      --  Select the clock source to be used for this UART peripheral:
+      --  01 =  MCGFLLCLK clock or MCGPLLCLK/2 clock
+      --
+      SOPT2_Value := SIM.Registers.SOPT2;
+      SOPT2_Value.UART0SRC := 1;
+      SIM.Registers.SOPT2 := SOPT2_Value;
+
       --  Enable UART clock
-      SIM.Registers.SCGC4.UART0 := 1;
+      SCGC4_Value := SIM.Registers.SCGC4;
+      SCGC4_Value.UART0 := 1;
+      SIM.Registers.SCGC4 := SCGC4_Value;
 
       --  Disable UART's transmitter and receiver, while UART is being
       --  configured:
@@ -76,33 +157,18 @@ package body System.Text_IO is
 
       --  Configure the uart transmission mode: 8-N-1
       --  (8 data bits, no parity bit, 1 stop bit):
-      UART.Uart0_Registers.C1 := (others => 0);
-
-      --  Configure Tx and RX FIFOs:
-      --  - Rx FIFO water mark = 1 (generate interrupt when Rx FIFO is not
-      --    empty)
-      --  - Enable Tx and Rx FIFOs
-      --  - Flush Tx and Rx FIFOs
-      UART.Uart0_Registers.RWFIFO := 1;
-      UART.Uart0_Registers.PFIFO := (RXFE => 1, TXFE => 1, others => 0);
-
-      UART.Uart0_Registers.CFIFO := (RXFLUSH => 1, TXFLUSH => 1, others => 0);
+      C1_Value := (others => 0);
+      UART.Uart0_Registers.C1 := C1_Value;
 
       --  Configure Tx pin:
-      PORT.PortB_Registers.PCR (17) := (MUX => 3, DSE => 1, IRQC => 0,
-                                        others => 0);
+      PCR_Value := (MUX => 2, DSE => 1, IRQC => 0, others => 0);
+      PORT.PortA_Registers.PCR (1) := PCR_Value;
 
       --  Configure Rx pin:
-      PORT.PortB_Registers.PCR (16) := (MUX => 3, DSE => 1, IRQC => 0,
-                                        others => 0);
+      PCR_Value := (MUX => 2, DSE => 1, IRQC => 0, others => 0);
+      PORT.PortA_Registers.PCR (2) := PCR_Value;
 
-      --  Set Baud Rate;
-      Calculated_SBR :=
-        Positive (System_Clock_Frequency) / (Positive (Baud_Rate) * 16);
-      BDH_Value := UART.Uart0_Registers.BDH;
-      BDH_Value.SBR := Encoded_Baud_Rate.High_Part;
-      UART.Uart0_Registers.BDH := BDH_Value;
-      UART.Uart0_Registers.BDL := Encoded_Baud_Rate.Low_Part;
+      Set_Baud_Rate;
 
       --  Disable generation of Tx/Rx interrupts:
       C2_Value.RIE := 0;
@@ -137,12 +203,8 @@ package body System.Text_IO is
    ---------
 
    procedure Put (C : Character) is
-      Old_Enabled : Boolean;
    begin
-      Memory_Protection.Set_CPU_Writable_Background_Region (True,
-                                                            Old_Enabled);
       UART.Uart0_Registers.D := Byte (Character'Pos (C));
-      Memory_Protection.Set_CPU_Writable_Background_Region (Old_Enabled);
    end Put;
 
    ----------------------------

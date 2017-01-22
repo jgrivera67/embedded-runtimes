@@ -1,5 +1,5 @@
 --
---  Copyright (c) 2016-2017, German Rivera
+--  Copyright (c) 2016, German Rivera
 --  All rights reserved.
 --
 --  Redistribution and use in source and binary forms, with or without
@@ -24,15 +24,9 @@
 --  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 --  POSSIBILITY OF SUCH DAMAGE.
 --
+pragma Restrictions (No_Elaboration_Code);
 
-with Interfaces;
+package Watchdog_Timer is
 
-package System.Text_IO.Extended is
-   pragma Preelaborate;
-
-   procedure Put_String (Str : String);
-
-   procedure Print_Uint32_Hexadecimal (Value : Interfaces.Unsigned_32);
-
-   procedure New_Line;
-end System.Text_IO.Extended;
+   procedure Initialize;
+end Watchdog_Timer;

@@ -27,76 +27,65 @@
 #############################################################################
 
 	.syntax unified
-	.cpu cortex-m4
-	.thumb
+	.arch armv6-m
 
 	/* This is the initial vector table and also the one that is used by
 	   the zfp runtime. Ravenscar runtimes install its own table (using
 	   VTOR register) defined in handler.S.  */
 	.section .vectors,"a"
+        .align 2
 __vectors0:
-	.word   __stack_end /* stack top address */
-	.word   _start_rom  /* 1 Reset */
-	.word   hang        /* 2 NMI */
-	.word   hang        /* 3 HardFault */
-	.word   hang        /* 4 MemManage */
+	.long   __stack_end /* stack top address */
+	.long   _start_rom  /* 1 Reset */
+	.long   hang        /* 2 NMI */
+	.long   hang        /* 3 HardFault */
 
         /* Flash Configuration */
         .section .FlashConfig, "a"
         .long 0xFFFFFFFF
         .long 0xFFFFFFFF
         .long 0xFFFFFFFF
-        .long 0xFFFFFFFE
+        .long 0xFFFF3DFE
 
 	.text
+        .thumb
 
 	.thumb_func
+        .align 2
 	.globl _start_rom
 _start_rom:
         /*
          * NOTE: Initializing the watchdog must be done first, otherwise the
          * watchdog will fire.
          */
-        bl      watchdog_timer__initialize
+        bl watchdog_timer__initialize
 
-        /* Enable FPU */
-        movw     r0,#0xED88
-        movt     r0,#0xE000
-        ldr      r1,[r0]
-        orr      r1,r1,#(0xF << 20)
-        str      r1,[r0]
-
-        /* Wait for store to complete and reset pipeline with FPU enabled  */
-        dsb
-        isb
-
-	/* Copy .data */
-	movw	r0,#:lower16:__data_start
-	movt	r0,#:upper16:__data_start
-	movw	r1,#:lower16:__data_words
-	movw	r2,#:lower16:__data_load
-	movt	r2,#:upper16:__data_load
-	cbz	r1,1f
-0:	ldr	r4,[r2],#4
-	str	r4,[r0],#4
-	subs	r1,r1,#1
-	bne	0b
+       	/* Copy .data */
+        ldr     r0, =__data_start
+	ldr     r1, =__data_end
+        ldr     r2, =__data_load
+0:	cmp     r0, r1
+        beq     1f
+        ldr	r3, [r2]
+        adds    r2, r2, #4
+	str	r3, [r0]
+        adds    r0, r0, #4
+	b	0b
 
 1:
 	/* Clear .bss */
-	movw	r0,#:lower16:__bss_start
-	movt	r0,#:upper16:__bss_start
-	movw	r1,#:lower16:__bss_words
-	mov	r2,#0
-	cbz	r1,1f
-0:	str	r2,[r0],#4
-	subs	r1,r1,#1
-	bne	0b
+        ldr     r0, =__bss_start
+	ldr     r1, =__bss_end
+        movs	r2, #0
+0:	cmp     r0, r1
+        beq     1f
+        str	r2, [r0]
+        adds    r0, r0, #4
+        b	0b
 
 1:
         bl	microcontroller_clocks__initialize
         bl      reset_counter__update
-        bl      memory_protection__initialize
 	bl	main
 
 hang:   b .

@@ -47,6 +47,7 @@ package body System.BB.Threads is
    use System.BB.Time;
    use System.BB.Parameters;
    use Board_Support;
+   use Memory_Protection;
 
    use type System.Address;
    use type System.Parameters.Size_Type;
@@ -138,6 +139,7 @@ package body System.BB.Threads is
       This_CPU      : System.Multiprocessors.CPU_Range;
       Stack_Top     : System.Address;
       Stack_Bottom  : System.Address) is
+      use System.Storage_Elements;
    begin
       --  The environment thread executes the main procedure of the program
 
@@ -199,6 +201,15 @@ package body System.BB.Threads is
          Stack_Pointer   => (if System.Parameters.Stack_Grows_Down
                              then Id.Top_Of_Stack
                              else Id.Bottom_Of_Stack));
+
+      --
+      --  Set task-private MPU region for primary stack:
+      --
+      Initialize_Private_Data_Region (
+         Region => Id.Thread_Regions.Stack_Region,
+         First_Address => Id.Bottom_Of_Stack,
+         Last_Address => To_Address (To_Integer (Id.Top_Of_Stack) - 1),
+         Permissions => Read_Write);
    end Initialize_Thread;
 
    ----------------
@@ -242,6 +253,8 @@ package body System.BB.Threads is
 
       Queues.Running_Thread_Table (Main_CPU) := Environment_Thread;
 
+      Restore_Thread_MPU_Regions (Environment_Thread.Thread_Regions);
+
       --  The tasking executive is initialized
 
       Initialized := True;
@@ -268,6 +281,8 @@ package body System.BB.Threads is
          Stack_Address + Stack_Size, Stack_Address);
 
       Queues.Running_Thread_Table (CPU_Id) := Idle_Thread;
+
+      Restore_Thread_MPU_Regions (Idle_Thread.Thread_Regions);
    end Initialize_Slave;
 
    --------------
@@ -286,6 +301,7 @@ package body System.BB.Threads is
    ------------------
 
    procedure Set_Priority (Priority : Integer) is
+      Old_Enabled : Boolean;
    begin
       Protection.Enter_Kernel;
 
@@ -304,7 +320,9 @@ package body System.BB.Threads is
         (Queues.Running_Thread /= Null_Thread_Id
           and then Priority >= Queues.Running_Thread.Base_Priority);
 
+      Set_CPU_Writable_Background_Region (True, Old_Enabled);
       Queues.Change_Priority (Queues.Running_Thread, Priority);
+      Set_CPU_Writable_Background_Region (Old_Enabled);
 
       Protection.Leave_Kernel;
    end Set_Priority;
@@ -315,6 +333,7 @@ package body System.BB.Threads is
 
    procedure Sleep is
       Self_Id : constant Thread_Id := Queues.Running_Thread;
+      Old_Enabled : Boolean;
    begin
       Protection.Enter_Kernel;
 
@@ -323,6 +342,7 @@ package body System.BB.Threads is
       pragma Assert
         (Self_Id /= Null_Thread_Id and then Self_Id.State = Runnable);
 
+      Set_CPU_Writable_Background_Region (True, Old_Enabled);
       if Self_Id.Wakeup_Signaled then
 
          --  Another thread has already executed a Wakeup on this thread so
@@ -362,6 +382,7 @@ package body System.BB.Threads is
 
       end if;
 
+      Set_CPU_Writable_Background_Region (Old_Enabled);
       Protection.Leave_Kernel;
 
       --  Now the thread has been awaken again and it is executing
@@ -409,8 +430,10 @@ package body System.BB.Threads is
    ------------
 
    procedure Wakeup (Id : Thread_Id) is
+      Old_Enabled : Boolean;
    begin
       Protection.Enter_Kernel;
+      Set_CPU_Writable_Background_Region (True, Old_Enabled);
 
       if Id.State = Suspended then
 
@@ -436,6 +459,7 @@ package body System.BB.Threads is
 
       pragma Assert (Id.State = Runnable);
 
+      Set_CPU_Writable_Background_Region (Old_Enabled);
       Protection.Leave_Kernel;
    end Wakeup;
 

@@ -1,5 +1,5 @@
 --
---  Copyright (c) 2016-2017, German Rivera
+--  Copyright (c) 2016, German Rivera
 --  All rights reserved.
 --
 --  Redistribution and use in source and binary forms, with or without
@@ -24,15 +24,24 @@
 --  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 --  POSSIBILITY OF SUCH DAMAGE.
 --
+pragma Restrictions (No_Elaboration_Code);
 
-with Interfaces;
-
-package System.Text_IO.Extended is
+package Microcontroller_Clocks is
    pragma Preelaborate;
 
-   procedure Put_String (Str : String);
+   type Hertz_Type is range 1 .. 1_000_000_000;
 
-   procedure Print_Uint32_Hexadecimal (Value : Interfaces.Unsigned_32);
+   Cpu_Clock_Frequency : constant Hertz_Type := 48_000_000;
 
-   procedure New_Line;
-end System.Text_IO.Extended;
+   System_Clock_Frequency : constant Hertz_Type := Cpu_Clock_Frequency;
+
+   Bus_Clock_Frequency : constant Hertz_Type := Cpu_Clock_Frequency / 2;
+
+   subtype Pll_Frequency_Type is
+     Positive range Integer (Cpu_Clock_Frequency) .. 100_000_000;
+
+   procedure Initialize;
+
+   function Get_Pll_Frequency_Hz return Pll_Frequency_Type;
+
+end Microcontroller_Clocks;

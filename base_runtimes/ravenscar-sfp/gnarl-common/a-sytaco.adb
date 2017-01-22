@@ -27,6 +27,7 @@
 --  This is the generic bare board version of this package
 
 with System.Task_Primitives.Operations;
+with Memory_Protection;
 
 package body Ada.Synchronous_Task_Control with
   SPARK_Mode => Off
@@ -86,8 +87,11 @@ is
    ---------------
 
    procedure Set_False (S : in out Suspension_Object) is
+      Old_Enabled : Boolean;
    begin
+      Memory_Protection.Set_CPU_Writable_Background_Region (True, Old_Enabled);
       S.Set_False;
+      Memory_Protection.Set_CPU_Writable_Background_Region (Old_Enabled);
    end Set_False;
 
    --------------
@@ -95,8 +99,11 @@ is
    --------------
 
    procedure Set_True (S : in out Suspension_Object) is
+      Old_Enabled : Boolean;
    begin
+      Memory_Protection.Set_CPU_Writable_Background_Region (True, Old_Enabled);
       S.Set_True;
+      Memory_Protection.Set_CPU_Writable_Background_Region (Old_Enabled);
    end Set_True;
 
    ------------------------
@@ -104,8 +111,11 @@ is
    ------------------------
 
    procedure Suspend_Until_True (S : in out Suspension_Object) is
+      Old_Enabled : Boolean;
    begin
+      Memory_Protection.Set_CPU_Writable_Background_Region (True, Old_Enabled);
       S.Wait;
+      Memory_Protection.Set_CPU_Writable_Background_Region (Old_Enabled);
    end Suspend_Until_True;
 
 end Ada.Synchronous_Task_Control;

@@ -35,6 +35,7 @@ with System.BB.Threads;
 with System.BB.Threads.Queues;
 with System.BB.Time;
 with System.Machine_Code; use System.Machine_Code;
+with Memory_Protection;
 
 package body System.BB.CPU_Primitives is
    use Parameters;
@@ -112,6 +113,14 @@ package body System.BB.CPU_Primitives is
 
    procedure GNAT_Error_Handler (Trap : Vector_Id);
    pragma No_Return (GNAT_Error_Handler);
+
+   procedure Restore_Thread_MPU_Regions;
+   pragma Export (Asm, Restore_Thread_MPU_Regions,
+                  "__restore_thread_mpu_regions");
+
+   procedure Save_Thread_MPU_Regions;
+   pragma Export (Asm, Save_Thread_MPU_Regions,
+                  "__save_thread_mpu_regions");
 
    -----------------------
    -- Context Switching --
@@ -330,6 +339,21 @@ package body System.BB.CPU_Primitives is
 
       Asm
         (Template =>
+         --
+         --  Save thread-specific data region descriptors from the MPU for the
+         --  old current task:
+         --
+         --  NOTE: Return with the background region enabled for writing so
+         --  that the Ada runtime can access its data structures:
+         --
+         "push {lr}" & NL &
+         "bl   __save_thread_mpu_regions" & NL &
+         "pop  {lr}" & NL &
+
+         --
+         --  Save CPU context for the old current task:
+         --
+
          "movw r2, #:lower16:__gnat_running_thread_table" & NL &
          "movt r2, #:upper16:__gnat_running_thread_table" & NL &
          "mrs  r12, PSP "       & NL & -- Retrieve current PSP
@@ -348,13 +372,23 @@ package body System.BB.CPU_Primitives is
             "addeq  r12, #1"          & NL &  --   save flag in bit 0 of PSP
             "subne  lr, #16"          & NL) & -- else set FPCA flag in LR
 
-         --  Swap R4-R11 and PSP (stored in R12)
-
+         --
+         --  Save R4-R11 and PSP (stored in R12)
+         --
          "stm  r3, {r4-r12}"        & NL & -- Save context
+
+         --
+         --  Restore CPU context for new current task:
+         --
+
          "movw r3, #:lower16:first_thread_table" & NL &
          "movt r3, #:upper16:first_thread_table" & NL &
          "ldr  r3, [r3]"            & NL & -- Load address of new context
          "str  r3, [r2]"            & NL & -- Update value of Pend_SV_Context
+
+         --
+         --  Restore R4-R11 and PSP (stored in R12)
+         --
          "ldm  r3, {r4-r12}"        & NL & -- Load context and new PSP
 
          --  If floating point is enabled, check bit 0 of PSP to see if we
@@ -371,9 +405,48 @@ package body System.BB.CPU_Primitives is
          --  Finally, update PSP and perform the exception return
 
          "msr  PSP, r12" & NL &        -- Update PSP
+
+         --
+         --  Restore thread-specific data region descriptors in the MPU for the
+         --  new current task:
+         --
+         --  NOTE: After doing this, the background region msy or may not be
+         --  enabled, depending on the background region state for the new
+         --  thread.
+         --
+         "push {lr}" & NL &
+         "bl   __restore_thread_mpu_regions" & NL &
+         "pop  {lr}" & NL &
+
          "bx   lr",                    -- return to caller
          Volatile => True);
    end Pend_SV_Handler;
+
+   --------------------------------
+   -- Restore_Thread_MPU_Regions --
+   --------------------------------
+
+   procedure Restore_Thread_MPU_Regions
+   is
+      Current_Thread_Descriptor_Ptr : constant Thread_Id :=
+         System.BB.Threads.Thread_Self;
+   begin
+      Memory_Protection.Restore_Thread_MPU_Regions (
+         Current_Thread_Descriptor_Ptr.Thread_Regions);
+   end Restore_Thread_MPU_Regions;
+
+   -----------------------------
+   -- Save_Thread_MPU_Regions --
+   -----------------------------
+
+   procedure Save_Thread_MPU_Regions
+   is
+      Current_Thread_Descriptor_Ptr : constant Thread_Id :=
+         System.BB.Threads.Thread_Self;
+   begin
+      Memory_Protection.Save_Thread_MPU_Regions (
+         Current_Thread_Descriptor_Ptr.Thread_Regions);
+   end Save_Thread_MPU_Regions;
 
    ---------------------
    -- SV_Call_Handler --
@@ -403,7 +476,7 @@ package body System.BB.CPU_Primitives is
    procedure Sys_Tick_Handler is
       Max_Alarm_Interval : constant Timer_Interval := Timer_Interval'Last / 2;
       Now : constant Timer_Interval := Read_Clock;
-
+      Old_Enabled : Boolean;
    begin
       --  The following allows max. efficiency for "useless" tick interrupts
 
@@ -414,7 +487,9 @@ package body System.BB.CPU_Primitives is
          return;
       end if;
 
+      Memory_Protection.Set_CPU_Writable_Background_Region (True, Old_Enabled);
       Alarm_Time := Now + Max_Alarm_Interval;
+      Memory_Protection.Set_CPU_Writable_Background_Region (Old_Enabled);
 
       --  Call the alarm handler
 

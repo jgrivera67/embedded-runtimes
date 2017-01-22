@@ -24,23 +24,67 @@
 --  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 --  POSSIBILITY OF SUCH DAMAGE.
 --
+
 pragma Restrictions (No_Elaboration_Code);
 
 --
---  @summary Cortex-M CPU core exception handlers
+--  @summary Register definitions for the Kinetis KL28Z's RCM hardware block
 --
-package Cpu_Exception_Handlers is
+package Kinetis_KL28Z.RCM is
+   pragma Preelaborate;
 
-   procedure Bus_Fault_Handler;
-   pragma Export (C, Bus_Fault_Handler, "bus_fault_handler");
+   --  SRS0 - System Reset Status Register 0
+   type SRS0_Type is record
+      WAKEUP : Bit;
+      LVD  : Bit;
+      LOC  : Bit;
+      LOL : Bit;
+      WDOG : Bit;
+      PIN : Bit;
+      POR : Bit;
+   end record with
+     Size      => Byte'Size,
+     Bit_Order => Low_Order_First;
 
-   procedure Hard_Fault_Handler;
-   pragma Export (C, Hard_Fault_Handler, "hard_fault_handler");
+   for SRS0_Type use record
+      WAKEUP at 0 range 0 .. 0;
+      LVD at 0 range 1 .. 1;
+      LOC at 0 range 2 .. 2;
+      LOL at 0 range 3 .. 3;
+      WDOG at 0 range 5 .. 5;
+      PIN at 0 range 6 .. 6;
+      POR at 0 range 7 .. 7;
+   end record;
 
-   procedure Mem_Manage_Fault_Handler;
-   pragma Export (C, Mem_Manage_Fault_Handler, "mem_manage_fault_handler");
+   --  SRS1 - System Reset Status Register 1
+   type SRS1_Type is record
+      LOCKUP : Bit;
+      SW : Bit;
+      MDM_AP : Bit;
+      SACKERR : Bit;
+   end record with
+     Size      => Byte'Size,
+     Bit_Order => Low_Order_First;
 
-   procedure Usage_Fault_Handler;
-   pragma Export (C, Usage_Fault_Handler, "usage_fault_handler");
+   for SRS1_Type use record
+      LOCKUP at 0 range 1 .. 1;
+      SW at 0 range 2 .. 2;
+      MDM_AP at 0 range 3 .. 3;
+      SACKERR at 0 range 5 .. 5;
+   end record;
 
-end Cpu_Exception_Handlers;
+   --
+   --  RCM Registers
+   --
+   type Registers_Type is record
+      SRS0 : SRS0_Type;
+      SRS1 : SRS1_Type;
+      Reserved : Bytes_Array (1 .. 2);
+      RPFC : Byte;
+      RPFW : Byte;
+   end record with
+     Volatile, Size => 16#6# * Byte'Size;
+
+   Registers : Registers_Type with
+     Import, Address => System'To_Address (16#4007F000#);
+end Kinetis_KL28Z.RCM;

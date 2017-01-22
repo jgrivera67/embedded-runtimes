@@ -45,7 +45,7 @@ __DYNAMIC  =  0;
 _DEFAULT_STACK_SIZE = 1024;
 
 /*
- * MPU region alignment in bytes
+ * Minimum MPU region alignment in bytes
  */
 MPU_REGION_ALIGNMENT = 32;
 

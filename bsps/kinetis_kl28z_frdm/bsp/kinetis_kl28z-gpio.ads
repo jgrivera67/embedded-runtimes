@@ -1,5 +1,5 @@
 --
---  Copyright (c) 2016-2017, German Rivera
+--  Copyright (c) 2016, German Rivera
 --  All rights reserved.
 --
 --  Redistribution and use in source and binary forms, with or without
@@ -25,14 +25,43 @@
 --  POSSIBILITY OF SUCH DAMAGE.
 --
 
-with Interfaces;
+pragma Restrictions (No_Elaboration_Code);
 
-package System.Text_IO.Extended is
+with Kinetis_KL25Z.PORT;
+
+--
+--  @summary Register definitions for the Kinetis KL28Z's GPIO
+--
+package Kinetis_KL28Z.GPIO is
    pragma Preelaborate;
 
-   procedure Put_String (Str : String);
+   --
+   --  GPIO registers
+   --
+   type Registers_Type is record
+      PDOR : PORT.Pin_Array_Type;
+      PSOR : PORT.Pin_Array_Type;
+      PCOR : PORT.Pin_Array_Type;
+      PTOR : PORT.Pin_Array_Type;
+      PDIR : PORT.Pin_Array_Type;
+      PDDR : PORT.Pin_Array_Type;
+   end record with
+      Volatile,
+      Size => 16#18# * Byte'Size;
 
-   procedure Print_Uint32_Hexadecimal (Value : Interfaces.Unsigned_32);
+   PortA_Registers : aliased Registers_Type with
+      Import, Address => System'To_Address (16#400FF000#);
 
-   procedure New_Line;
-end System.Text_IO.Extended;
+   PortB_Registers : aliased Registers_Type with
+      Import, Address => System'To_Address (16#400FF040#);
+
+   PortC_Registers : aliased Registers_Type with
+      Import, Address => System'To_Address (16#400FF080#);
+
+   PortD_Registers : aliased Registers_Type with
+      Import, Address => System'To_Address (16#400FF0C0#);
+
+   PortE_Registers : aliased Registers_Type with
+      Import, Address => System'To_Address (16#400FF100#);
+
+end Kinetis_KL28Z.GPIO;

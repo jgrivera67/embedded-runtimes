@@ -1,5 +1,5 @@
 --
---  Copyright (c) 2016-2017, German Rivera
+--  Copyright (c) 2016, German Rivera
 --  All rights reserved.
 --
 --  Redistribution and use in source and binary forms, with or without
@@ -24,15 +24,27 @@
 --  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 --  POSSIBILITY OF SUCH DAMAGE.
 --
+pragma Restrictions (No_Elaboration_Code);
 
-with Interfaces;
+with Interfaces; use Interfaces;
+with System; use System;
 
-package System.Text_IO.Extended is
+package Reset_Counter is
    pragma Preelaborate;
 
-   procedure Put_String (Str : String);
+   procedure Update;
 
-   procedure Print_Uint32_Hexadecimal (Value : Interfaces.Unsigned_32);
+   function Get return Unsigned_32;
+   --
+   --  Retrieves the current value of the CPU reset counter
+   --
+   --  @return current CPU reset count
+   --
 
-   procedure New_Line;
-end System.Text_IO.Extended;
+private
+
+   function Mem_Checksum (Start_Addr : Address; Size : Unsigned_32)
+                          return Unsigned_32;
+
+   function Valid return Boolean;
+end Reset_Counter;
