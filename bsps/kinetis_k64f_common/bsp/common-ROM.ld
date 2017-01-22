@@ -44,6 +44,11 @@ __DYNAMIC  =  0;
 
 _DEFAULT_STACK_SIZE = 1024;
 
+/*
+ * MPU region alignment in bytes
+ */
+MPU_REGION_ALIGNMENT = 32;
+
 ENTRY(_start_rom);
 
 SECTIONS
@@ -65,8 +70,14 @@ SECTIONS
 
   .text :
   {
+    . = ALIGN(MPU_REGION_ALIGNMENT);
+    __flash_text_start = .;
+
     *(.text .text.* .gnu.linkonce.t*)
     *(.gnu.warning)
+
+    . = ALIGN(MPU_REGION_ALIGNMENT);
+    __flash_text_end = .;
   } > flash_text
 
   .ARM.extab   : { *(.ARM.extab* .gnu.linkonce.armextab.*) } > flash_text
@@ -78,18 +89,29 @@ SECTIONS
   {
     *(.lit)
     *(.rodata .rodata.* .gnu.linkonce.r*)
-    . = ALIGN(0x4);
+    . = ALIGN(MPU_REGION_ALIGNMENT);
     __rom_end = .;
   } > flash_text
 
   __data_load = __rom_end;
   .data : AT (__rom_end)
   {
+    . = ALIGN(MPU_REGION_ALIGNMENT);
     __data_start = .;
+    __background_region_before_secret_area_start = .;
     *(.data .data.* .gnu.linkonce.d*)
 
-    . = ALIGN(0x4);
+    . = ALIGN(MPU_REGION_ALIGNMENT);
+    __ram_code_start = .;
     *(.ram_code)        /* For code relocated to SRAM */
+    . = ALIGN(MPU_REGION_ALIGNMENT);
+    __ram_code_end = .;
+
+    . = ALIGN(MPU_REGION_ALIGNMENT);
+    __background_region_before_secret_area_end = .;
+    *(.secret_data)
+    . = ALIGN(MPU_REGION_ALIGNMENT);
+    __background_region_after_secret_area_start = .;
 
     /* Ensure that the end of the data section is always word aligned.
        Initial values are stored in 4-bytes blocks so we must guarantee
@@ -126,19 +148,24 @@ SECTIONS
    . = ALIGN(0x8);    /* Align the stack to 64 bits */
    __bss_end = .;
 
+   . = ALIGN(MPU_REGION_ALIGNMENT);
    __interrupt_stack_start = .;
    *(.interrupt_stacks)
-   . = ALIGN(0x8);
+   . = ALIGN(MPU_REGION_ALIGNMENT);
    __interrupt_stack_end = .;
 
+   . = ALIGN(MPU_REGION_ALIGNMENT);
    __stack_start = .;
    . += DEFINED (_STACK_SIZE) ? _STACK_SIZE : _DEFAULT_STACK_SIZE;
-   . = ALIGN(0x8);
+   . = ALIGN(MPU_REGION_ALIGNMENT);
    __stack_end = .;
 
    _end = .;
    __heap_start = .;
    __heap_end = ORIGIN(sram) + LENGTH(sram);
+
+    . = ALIGN(MPU_REGION_ALIGNMENT);
+    __background_region_after_secret_area_end = .;
   } > sram
 
   __bss_words = (__bss_end - __bss_start) >> 2;

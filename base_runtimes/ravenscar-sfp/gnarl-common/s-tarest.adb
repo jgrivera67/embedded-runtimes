@@ -52,11 +52,14 @@ with System.Secondary_Stack;
 with System.Storage_Elements;
 --  used for Storage_Array
 
+with Memory_Protection;
+
 package body System.Tasking.Restricted.Stages is
 
    use System.Secondary_Stack;
    use System.Task_Primitives.Operations;
    use System.Task_Info;
+   use Memory_Protection;
 
    Tasks_Activation_Chain : Task_Id;
    --  Chain of all the tasks to activate, when the sequential elaboration
@@ -117,8 +120,9 @@ package body System.Tasking.Restricted.Stages is
       --  have maximum alignment, since any kind of data can be allocated here.
 
       TH : Termination_Handler := null;
-
+      Old_Enabled : Boolean;
    begin
+      Set_CPU_Writable_Background_Region (True, Old_Enabled);
       Self_ID.Common.Compiler_Data.Sec_Stack_Addr := Secondary_Stack'Address;
       SS_Init (Secondary_Stack'Address, Integer (Sec_Stack_Size));
 
@@ -126,6 +130,7 @@ package body System.Tasking.Restricted.Stages is
       --  the creator.
 
       Enter_Task (Self_ID);
+      Set_CPU_Writable_Background_Region (False);
 
       --  Call the task body procedure
 
@@ -141,6 +146,7 @@ package body System.Tasking.Restricted.Stages is
       --  Raise the priority to prevent race conditions when using
       --  System.Tasking.Fall_Back_Handler.
 
+      Set_CPU_Writable_Background_Region (True);
       Set_Priority (Self_ID, Any_Priority'Last);
 
       TH := System.Tasking.Fall_Back_Handler;
@@ -154,6 +160,8 @@ package body System.Tasking.Restricted.Stages is
       if TH /= null then
          TH.all (Self_ID);
       end if;
+
+      Set_CPU_Writable_Background_Region (Old_Enabled);
 
       --  We used to raise a Program_Error here to signal the task termination
       --  event in order to avoid silent task death. It has been removed

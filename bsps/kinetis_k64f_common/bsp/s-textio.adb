@@ -36,6 +36,7 @@ with Kinetis_K64F.SIM;
 with Kinetis_K64F.PORT;
 with Interfaces.Bit_Types;
 with Microcontroller_Clocks;
+with Memory_Protection;
 
 package body System.Text_IO is
    use Kinetis_K64F;
@@ -136,8 +137,12 @@ package body System.Text_IO is
    ---------
 
    procedure Put (C : Character) is
+      Old_Enabled : Boolean;
    begin
+      Memory_Protection.Set_CPU_Writable_Background_Region (True,
+                                                            Old_Enabled);
       UART.Uart0_Registers.D := Byte (Character'Pos (C));
+      Memory_Protection.Set_CPU_Writable_Background_Region (Old_Enabled);
    end Put;
 
    ----------------------------
