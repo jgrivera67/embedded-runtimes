@@ -205,10 +205,11 @@ package body System.BB.Threads is
       --
       --  Set task-private MPU region for primary stack:
       --
-      Id.Thread_Regions.Stack_Region :=
-        (First_Address => Id.Bottom_Of_Stack,
+      Initialize_Private_Data_Region (
+         Region => Id.Thread_Regions.Stack_Region,
+         First_Address => Id.Bottom_Of_Stack,
          Last_Address => To_Address (To_Integer (Id.Top_Of_Stack) - 1),
-         Enabled => True);
+         Permissions => Read_Write);
    end Initialize_Thread;
 
    ----------------

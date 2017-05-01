@@ -138,7 +138,7 @@ package System.BB.Threads is
       Execution_Time : System.BB.Time.Composite_Execution_Time;
       --  CPU time spent for this thread
 
-      Thread_Regions : Memory_Protection.Task_Regions_Type;
+      Thread_Regions : Memory_Protection.Thread_Regions_Type;
       --  Thread-private MPU regions for this thread
    end record;
 

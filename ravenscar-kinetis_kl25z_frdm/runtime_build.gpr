@@ -24,6 +24,7 @@ project Runtime_Build is
          for Object_Dir use "sfp/obj";
 
          for Source_Dirs use ("../bsps/kinetis_kl25z_frdm/bsp",
+                              "../bsps/common",
                               "../base_runtimes/ravenscar-sfp/arch",
                               "../base_runtimes/ravenscar-sfp/common");
          for Runtime ("Ada") use Project'Project_Dir & "sfp";
@@ -32,6 +33,7 @@ project Runtime_Build is
          for Object_Dir use "full/obj";
 
          for Source_Dirs use ("../bsps/kinetis_kl25z_frdm/bsp",
+                              "../bsps/common",
                               "../base_runtimes/ravenscar-full/arch",
                               "../base_runtimes/ravenscar-full/common",
                               "../base_runtimes/ravenscar-full/math");

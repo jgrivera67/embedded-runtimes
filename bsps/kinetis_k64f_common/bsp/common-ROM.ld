@@ -71,6 +71,10 @@ SECTIONS
   .text :
   {
     . = ALIGN(MPU_REGION_ALIGNMENT);
+    __secret_flash_text_start = .;
+    *(.secret_flash_text)   /* safety-critical or security-sensitive code */
+    . = ALIGN(MPU_REGION_ALIGNMENT);
+    __secret_flash_text_end = .;
     __flash_text_start = .;
 
     *(.text .text.* .gnu.linkonce.t*)
@@ -98,20 +102,21 @@ SECTIONS
   {
     . = ALIGN(MPU_REGION_ALIGNMENT);
     __data_start = .;
-    __background_region_before_secret_area_start = .;
+    __ram_text_start = .;
+    *(.ram_text)        /* For code relocated to SRAM */
+    . = ALIGN(MPU_REGION_ALIGNMENT);
+    __ram_text_end = .;
+    __secret_ram_text_start = .;
+    *(.secret_ram_text) /* safety-critical or security-sensitive code in SRAM */
+    . = ALIGN(MPU_REGION_ALIGNMENT);
+    __secret_ram_text_end = .;
+    __secret_data_area_start = .;
+    *(.secret_data)     /* security sensitive data */
+    . = ALIGN(MPU_REGION_ALIGNMENT);
+    __secret_data_area_end = .;
+    __background_data_region_start = .;
+
     *(.data .data.* .gnu.linkonce.d*)
-
-    . = ALIGN(MPU_REGION_ALIGNMENT);
-    __ram_code_start = .;
-    *(.ram_code)        /* For code relocated to SRAM */
-    . = ALIGN(MPU_REGION_ALIGNMENT);
-    __ram_code_end = .;
-
-    . = ALIGN(MPU_REGION_ALIGNMENT);
-    __background_region_before_secret_area_end = .;
-    *(.secret_data)
-    . = ALIGN(MPU_REGION_ALIGNMENT);
-    __background_region_after_secret_area_start = .;
 
     /* Ensure that the end of the data section is always word aligned.
        Initial values are stored in 4-bytes blocks so we must guarantee
@@ -163,9 +168,6 @@ SECTIONS
    _end = .;
    __heap_start = .;
    __heap_end = ORIGIN(sram) + LENGTH(sram);
-
-    . = ALIGN(MPU_REGION_ALIGNMENT);
-    __background_region_after_secret_area_end = .;
   } > sram
 
   __bss_words = (__bss_end - __bss_start) >> 2;
