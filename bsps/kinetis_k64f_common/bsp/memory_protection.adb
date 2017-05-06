@@ -28,6 +28,7 @@
 with System.BB.Parameters;
 with System.Machine_Code;
 with Kinetis_K64F.MPU;
+with Kinetis_K64F.SCS;
 with System.Text_IO.Extended;
 with System.BB.Threads;
 with System.Multiprocessors;
@@ -39,6 +40,7 @@ package body Memory_Protection is
    use Interfaces;
    use Kinetis_K64F.MPU;
    use Machine_Code;
+   use Kinetis_K64F.SCS;
 
    --
    --  Flag to enable/disable at compile time the secret data area.
@@ -77,6 +79,8 @@ package body Memory_Protection is
    type Memory_Protection_Type is record
       Initialized : Boolean := False;
       MPU_Enabled : Boolean := False;
+      Return_From_Fault_Enabled : Boolean := False;
+      Fault_Happened_Flag : Boolean := False;
       Num_Regions : Natural := 0;
    end record;
 
@@ -188,6 +192,8 @@ package body Memory_Protection is
                   Region_Id > Global_RAM_Code_Region
                   and
                   Bus_Master /= Debugger;
+
+   procedure Memory_Barrier;
 
    procedure Save_Private_Code_Region (
       Region : out Code_Region_Type)
@@ -351,7 +357,7 @@ package body Memory_Protection is
       WORD3_Value.VLD := 1;
       MPU_Registers.Region_Descriptors (Region_Index).WORD3 := WORD3_Value;
 
-      System.Machine_Code.Asm ("isb", Volatile => True);
+      Memory_Barrier;
       Restore_Cpu_Interrupts (Old_Intr_Mask);
    end Define_MPU_Region;
 
@@ -444,9 +450,9 @@ package body Memory_Protection is
       pragma Assert (Memory_Protection_Var.Initialized);
       pragma Assert (Memory_Protection_Var.MPU_Enabled);
 
-      System.Machine_Code.Asm ("isb", Volatile => True);
+      Memory_Barrier;
       MPU_Registers.CESR := (VLD => 0, others => <>);
-      System.Machine_Code.Asm ("isb", Volatile => True);
+      Memory_Barrier;
       Memory_Protection_Var.MPU_Enabled := False;
    end Disable_MPU;
 
@@ -676,7 +682,9 @@ package body Memory_Protection is
    -- Enable_MPU --
    ----------------
 
-   procedure Enable_MPU is
+   procedure Enable_MPU (Enable_Precise_Write_Faults : Boolean := False) is
+      ACTLR_Value : ACTLR_Register;
+      Old_Region : Data_Region_Type;
    begin
       if not System.BB.Parameters.Use_MPU then
          return;
@@ -686,10 +694,65 @@ package body Memory_Protection is
       pragma Assert (not Memory_Protection_Var.MPU_Enabled);
 
       Memory_Protection_Var.MPU_Enabled := True;
-      System.Machine_Code.Asm ("isb", Volatile => True);
+      Memory_Barrier;
       MPU_Registers.CESR := (VLD => 1, others => <>);
-      System.Machine_Code.Asm ("isb", Volatile => True);
+      Memory_Barrier;
+      if Enable_Precise_Write_Faults then
+         --
+         --  Disable write buffer, so that precise write faults can be
+         --  generated:
+         --
+         Set_Private_Object_Data_Region (SCS_Registers'Address,
+                                         SCS_Registers'Size,
+                                         Read_Write,
+                                         Old_Region);
+
+         ACTLR_Value := SCS_Registers.ACTLR;
+         ACTLR_Value.DISDEFWBUF := 1;
+         SCS_Registers.ACTLR := ACTLR_Value;
+         Memory_Barrier;
+         Restore_Private_Object_Data_Region (Old_Region);
+      end if;
    end Enable_MPU;
+
+   ------------------------------
+   -- Enable_Return_From_Fault --
+   ------------------------------
+
+   procedure Enable_Return_From_Fault
+   is
+      Old_Region : Data_Region_Type;
+      ACTLR_Value : ACTLR_Register;
+   begin
+      Set_Private_Object_Data_Region (Memory_Protection_Var'Address,
+                                      Memory_Protection_Var'Size,
+                                      Read_Write,
+                                      Old_Region);
+
+      Memory_Protection_Var.Return_From_Fault_Enabled := True;
+      Memory_Protection_Var.Fault_Happened_Flag := False;
+
+      Set_Private_Object_Data_Region (SCS_Registers'Address,
+                                      SCS_Registers'Size,
+                                      Read_Write);
+
+      --
+      --  Disable write buffer, so that precise write faults can be
+      --  generated:
+      --
+      ACTLR_Value := SCS_Registers.ACTLR;
+      ACTLR_Value.DISDEFWBUF := 1;
+      SCS_Registers.ACTLR := ACTLR_Value;
+      Memory_Barrier;
+      Restore_Private_Object_Data_Region (Old_Region);
+   end Enable_Return_From_Fault;
+
+   --------------------
+   -- Fault_Happened --
+   --------------------
+
+   function Fault_Happened return Boolean
+   is (Memory_Protection_Var.Fault_Happened_Flag);
 
    ----------------
    -- Initialize --
@@ -859,6 +922,7 @@ package body Memory_Protection is
          MPU_Registers.CESR := (VLD => 0, others => <>);
       end if;
 
+      Memory_Protection_Var.Return_From_Fault_Enabled := False;
       Memory_Protection_Var.Initialized := True;
    end Initialize;
 
@@ -885,6 +949,25 @@ package body Memory_Protection is
 
    function Is_MPU_Enabled return Boolean is
       (Memory_Protection_Var.MPU_Enabled);
+
+   ----------------------------------
+   -- Is_Return_From_Fault_Enabled --
+   ----------------------------------
+
+   function Is_Return_From_Fault_Enabled return Boolean is
+      (Memory_Protection_Var.Return_From_Fault_Enabled);
+
+   --------------------
+   -- Memory_Barrier --
+   --------------------
+
+   procedure Memory_Barrier is
+   begin
+      Asm ("dsb" & ASCII.LF &
+           "isb" & ASCII.LF,
+           Clobber => "memory",
+           Volatile => True);
+   end Memory_Barrier;
 
    ----------------------------
    -- Restore_Cpu_Interrupts --
@@ -1218,8 +1301,7 @@ package body Memory_Protection is
             RGDAAC_Value;
       end if;
 
-      System.Machine_Code.Asm ("isb", Volatile => True);
-
+      Memory_Barrier;
       Restore_Cpu_Interrupts (Old_Intr_Mask);
    end Set_CPU_Writable_Background_Region;
 
@@ -1292,6 +1374,42 @@ package body Memory_Protection is
                          Type2_Permissions);
 
    end Set_DMA_Region;
+
+   ------------------------
+   -- Set_Fault_Happened --
+   ------------------------
+
+   procedure Set_Fault_Happened
+   is
+      Old_Region : Data_Region_Type;
+      ACTLR_Value : ACTLR_Register;
+   begin
+      pragma Assert (Memory_Protection_Var.Return_From_Fault_Enabled);
+
+      Set_Private_Object_Data_Region (Memory_Protection_Var'Address,
+                                      Memory_Protection_Var'Size,
+                                      Read_Write,
+                                      Old_Region);
+
+      Memory_Protection_Var.Return_From_Fault_Enabled := False;
+      Memory_Protection_Var.Fault_Happened_Flag := True;
+
+      Set_Private_Object_Data_Region (SCS_Registers'Address,
+                                      SCS_Registers'Size,
+                                      Read_Write);
+
+      --
+      --  Re-enable write buffer
+      --
+      ACTLR_Value := SCS_Registers.ACTLR;
+      ACTLR_Value.DISDEFWBUF := 0;
+      SCS_Registers.ACTLR := ACTLR_Value;
+
+      Restore_Private_Object_Data_Region (Old_Region);
+      loop
+         null;
+      end loop;
+   end Set_Fault_Happened;
 
    -----------------------------
    -- Set_Private_Code_Region --

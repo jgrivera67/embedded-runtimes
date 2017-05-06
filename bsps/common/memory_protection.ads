@@ -166,11 +166,20 @@ package Memory_Protection is
 
    function Is_MPU_Enabled return Boolean;
 
+   function Is_Return_From_Fault_Enabled return Boolean;
+
+   procedure Set_Fault_Happened;
+
    ---------------------------------------------------------
    --  Public interfaces to be invoked from applications  --
    ---------------------------------------------------------
 
-   procedure Enable_MPU;
+   procedure Enable_MPU (Enable_Precise_Write_Faults : Boolean := False);
+   --
+   --  Enable MPU to enforce memory protection
+   --
+   --  NOTE: Set Enable_Precise_Write_Faults may degrade performance.
+   --  It should be used only for debugging faults.
    --
    --  This subprogram should be invoked at the beginning of the main program
    --
@@ -270,6 +279,18 @@ package Memory_Protection is
    procedure Dump_MPU_Error_Registers;
 
    procedure Dump_MPU_Region_Descriptors;
+
+   procedure Enable_Return_From_Fault;
+   --
+   --  Enable returning form a fault to the next instruction after the faulting
+   --  instruction.
+   --
+
+   function Fault_Happened return Boolean;
+   --
+   --  Return True if a fault happened, since the last call to
+   --  Enable_Return_From_Fault
+   --
 
 private
 

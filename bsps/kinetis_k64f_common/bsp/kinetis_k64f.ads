@@ -40,6 +40,7 @@ package Kinetis_K64F is
    pragma Preelaborate;
 
    type Bytes_Array is array (Positive range <>) of Byte;
+   type Words_Array is array (Positive range <>) of Word;
 
    subtype Two_Bits is UInt2;
    subtype Three_Bits is UInt3;

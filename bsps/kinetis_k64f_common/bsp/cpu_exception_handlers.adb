@@ -27,51 +27,23 @@
 
 with System.Text_IO.Extended;
 with System.BB.CPU_Primitives;
-with Interfaces.Bit_Types;
 with System.Machine_Code;
 with System.Storage_Elements;
 with Memory_Protection;
+with Interfaces;
+with Kinetis_K64F.SCS;
 
 package body Cpu_Exception_Handlers is
-   use Interfaces.Bit_Types;
    use Interfaces;
+   use Kinetis_K64F.SCS;
 
-   type Words_Array_Type is array (Positive range <>) of aliased Word;
-   --
-   --  SCB registers
-   --
-   type SCB_Type is record
-      CPUID : Word;
-      ICSR : Word;
-      VTOR : Word;
-      AIRCR : Word;
-      SCR : Word;
-      CCR : Word;
-      SHP : Words_Array_Type (1 .. 3);
-      SHCSR : Word;
-      CFSR : Word;
-      HFSR : Word;
-      DFSR : Word;
-      MMFAR : Word;
-      BFAR : Word;
-      AFSR : Word;
-      PFR : Words_Array_Type (1 .. 2);
-      DFR : Word;
-      ADR : Word;
-      MMFR : Words_Array_Type (1 .. 4);
-      ISAR : Words_Array_Type (1 .. 5);
-      Reserved : Words_Array_Type (1 .. 5);
-      CPACR : Word;
-   end record with Volatile, Size => 16#8c# * Byte'Size;
-
-   SCB : aliased SCB_Type with
-     Import, Address => System'To_Address (16#E000ED00#);
+   Instruction_Size : constant := 2; --  in bytes
 
    Exception_Handler_Running : Boolean := False;
 
    procedure Common_Cpu_Exception_Handler (Msg : String;
                                            Return_Address : Unsigned_32)
-      with Inline, No_Return;
+      with Inline;
 
    function Get_LR_Register return Unsigned_32 with Inline_Always;
 
@@ -97,6 +69,40 @@ package body Cpu_Exception_Handlers is
                                            Return_Address : Unsigned_32)
    is
       use System.Storage_Elements;
+
+      procedure Dump_Fault_Status_Registers;
+
+      procedure Dump_Fault_Status_Registers is
+         CFSR : Unsigned_32 with Address => SCS_Registers.SCB.CFSR'Address;
+         HFSR : Unsigned_32 with Address => SCS_Registers.SCB.HFSR'Address;
+         DFSR : Unsigned_32 with Address => SCS_Registers.SCB.DFSR'Address;
+      begin
+         System.Text_IO.Extended.Put_String (
+            "Fault status registers (see section 4.3 of " &
+            "DUI0553A_cortex_m4_dgug.pdf):" & ASCII.LF &
+            ASCII.HT & "SCB CFSR: ");
+         System.Text_IO.Extended.Print_Uint32_Hexadecimal (CFSR);
+         System.Text_IO.Extended.Put_String (ASCII.LF &
+            ASCII.HT & "SCB HFSR: ");
+         System.Text_IO.Extended.Print_Uint32_Hexadecimal (HFSR);
+         System.Text_IO.Extended.Put_String (ASCII.LF &
+            ASCII.HT & "SCB DFSR: ");
+         System.Text_IO.Extended.Print_Uint32_Hexadecimal (DFSR);
+         System.Text_IO.Extended.Put_String (ASCII.LF &
+            ASCII.HT & "SCB MMFAR: ");
+         System.Text_IO.Extended.Print_Uint32_Hexadecimal (
+            SCS_Registers.SCB.MMFAR);
+         System.Text_IO.Extended.Put_String (ASCII.LF &
+            ASCII.HT & "SCB BFAR: ");
+         System.Text_IO.Extended.Print_Uint32_Hexadecimal (
+            SCS_Registers.SCB.BFAR);
+         System.Text_IO.Extended.Put_String (ASCII.LF &
+            ASCII.HT & "SCB AFSR: ");
+         System.Text_IO.Extended.Print_Uint32_Hexadecimal (
+            SCS_Registers.SCB.AFSR);
+         System.Text_IO.Extended.New_Line;
+      end Dump_Fault_Status_Registers;
+
    begin
       System.BB.CPU_Primitives.Disable_Interrupts;
       if Exception_Handler_Running then
@@ -109,22 +115,7 @@ package body Cpu_Exception_Handlers is
       Exception_Handler_Running := True;
 
       System.Text_IO.Extended.Put_String (ASCII.LF & Msg & ASCII.LF);
-      System.Text_IO.Extended.Put_String (
-         "Fault status registers (see section 4.3 of " &
-         "DUI0553A_cortex_m4_dgug.pdf):" & ASCII.LF & ASCII.HT & "SCB CFSR: ");
-      System.Text_IO.Extended.Print_Uint32_Hexadecimal (SCB.CFSR);
-      System.Text_IO.Extended.Put_String (ASCII.LF & ASCII.HT & "SCB HFSR: ");
-      System.Text_IO.Extended.Print_Uint32_Hexadecimal (SCB.HFSR);
-      System.Text_IO.Extended.Put_String (ASCII.LF & ASCII.HT & "SCB DFSR: ");
-      System.Text_IO.Extended.Print_Uint32_Hexadecimal (SCB.DFSR);
-      System.Text_IO.Extended.Put_String (ASCII.LF & ASCII.HT & "SCB MMFAR: ");
-      System.Text_IO.Extended.Print_Uint32_Hexadecimal (SCB.MMFAR);
-      System.Text_IO.Extended.Put_String (ASCII.LF & ASCII.HT & "SCB BFAR: ");
-      System.Text_IO.Extended.Print_Uint32_Hexadecimal (SCB.BFAR);
-      System.Text_IO.Extended.Put_String (ASCII.LF & ASCII.HT & "SCB AFSR: ");
-      System.Text_IO.Extended.Print_Uint32_Hexadecimal (SCB.AFSR);
-      System.Text_IO.Extended.New_Line;
-
+      Dump_Fault_Status_Registers;
       Memory_Protection.Dump_MPU_Error_Registers;
       Memory_Protection.Dump_MPU_Region_Descriptors;
 
@@ -136,15 +127,54 @@ package body Cpu_Exception_Handlers is
          --  pointer, so the offending code was a task
          --
          declare
-            Stack : array (0 .. 6) of Unsigned_32 with Address =>
+            Stack : array (0 .. 7) of Unsigned_32 with Address =>
                        To_Address (Integer_Address (Get_PSP_Register));
-            PC_At_Exception : constant Unsigned_32  := Stack (6);
+
+            PSR_At_Exception : constant Unsigned_32  :=
+               Stack (7);
+            PC_At_Exception : constant Unsigned_32  :=
+               Stack (6); --  ??? - Instruction_Size;
+            LR_At_Exception : constant Unsigned_32  :=
+               Stack (5);
          begin
             System.Text_IO.Extended.Put_String (
-               ASCII.LF & "Code address where fault happened: ");
+               ASCII.LF & "Code address where fault might have happened: ");
+            System.Text_IO.Extended.Print_Uint32_Hexadecimal (
+               (LR_At_Exception and not 16#1#) - (3 * Instruction_Size));
+            System.Text_IO.Extended.New_Line;
+
+            System.Text_IO.Extended.Put_String (
+               ASCII.LF & "PC when fault happened: ");
             System.Text_IO.Extended.Print_Uint32_Hexadecimal (PC_At_Exception);
             System.Text_IO.Extended.New_Line;
-            raise Program_Error with Msg;
+
+            System.Text_IO.Extended.Put_String (
+               ASCII.LF & "LR when fault happened: ");
+            System.Text_IO.Extended.Print_Uint32_Hexadecimal (LR_At_Exception);
+            System.Text_IO.Extended.New_Line;
+
+            System.Text_IO.Extended.Put_String (
+               ASCII.LF & "PSR when fault happened: ");
+            System.Text_IO.Extended.Print_Uint32_Hexadecimal (
+               PSR_At_Exception);
+            System.Text_IO.Extended.New_Line;
+
+            if Memory_Protection.Is_Return_From_Fault_Enabled then
+               Memory_Protection.Set_Fault_Happened;
+
+               --
+               --  Change PC saved on the stack to point to the next
+               --  instruction after the instruction that caused the fault:
+               --
+               Stack (6) := LR_At_Exception - (2 * Instruction_Size);
+
+               --
+               --  Return from the exception to the next instruction after the
+               --  instruction that caused the fault:
+               --
+            else
+               raise Program_Error with Msg;
+            end if;
          end;
       else
          System.Text_IO.Extended.Put_String (
