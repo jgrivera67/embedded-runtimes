@@ -102,14 +102,14 @@ SECTIONS
   {
     . = ALIGN(MPU_REGION_ALIGNMENT);
     __data_start = .;
-    __ram_text_start = .;
-    *(.ram_text)        /* For code relocated to SRAM */
-    . = ALIGN(MPU_REGION_ALIGNMENT);
-    __ram_text_end = .;
     __secret_ram_text_start = .;
     *(.secret_ram_text) /* safety-critical or security-sensitive code in SRAM */
     . = ALIGN(MPU_REGION_ALIGNMENT);
     __secret_ram_text_end = .;
+    __ram_text_start = .;
+    *(.ram_text)        /* For code relocated to SRAM */
+    . = ALIGN(MPU_REGION_ALIGNMENT);
+    __ram_text_end = .;
     __secret_data_area_start = .;
     *(.secret_data)     /* security sensitive data */
     . = ALIGN(MPU_REGION_ALIGNMENT);

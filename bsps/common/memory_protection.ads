@@ -44,6 +44,7 @@ package Memory_Protection is
    use System.Storage_Elements;
    use System;
    use Interfaces.Bit_Types;
+   use Interfaces;
 
    --
    --  MPU region alignment (in bytes)
@@ -166,10 +167,6 @@ package Memory_Protection is
 
    function Is_MPU_Enabled return Boolean;
 
-   function Is_Return_From_Fault_Enabled return Boolean;
-
-   procedure Set_Fault_Happened;
-
    ---------------------------------------------------------
    --  Public interfaces to be invoked from applications  --
    ---------------------------------------------------------
@@ -191,7 +188,7 @@ package Memory_Protection is
          Permissions : Data_Permissions_Type)
          with Pre => First_Address /= Null_Address and
                      Last_Address /= Null_Address  and
-                     First_Address < Last_Address and
+                     To_Integer (First_Address) < To_Integer (Last_Address) and
                      Permissions /= None;
 
    procedure Restore_Private_Code_Region (Saved_Region : Code_Region_Type)
@@ -203,21 +200,65 @@ package Memory_Protection is
       with Pre => Is_Valid_Data_Region (Saved_Region);
       --  with Inline;
 
+   --  Linker script symbol for the start address of the global RAM
+   --  text region
+   RAM_Text_Start : constant Unsigned_32;
+   pragma Import (Asm, RAM_Text_Start, "__ram_text_start");
+
+   --  Linker script symbol for the end address of the global RAM text
+   --  region
+   RAM_Text_End : constant Unsigned_32;
+   pragma Import (Asm, RAM_Text_End, "__ram_text_end");
+
+   --  Linker script symbol for the start address of the sectet flash
+   --  text region
+   Secret_Flash_Text_Start : constant Unsigned_32;
+   pragma Import (Asm, Secret_Flash_Text_Start, "__secret_flash_text_start");
+
+   --  Linker script symbol for the end address of the secret flash text
+   --  region
+   Secret_Flash_Text_End : constant Unsigned_32;
+   pragma Import (Asm, Secret_Flash_Text_End, "__secret_flash_text_end");
+
+   --  Linker script symbol for the start address of the sectet RAM
+   --  text region
+   Secret_RAM_Text_Start : constant Unsigned_32;
+   pragma Import (Asm, Secret_RAM_Text_Start, "__secret_ram_text_start");
+
+   --  Linker script symbol for the end address of the secret RAM text
+   --  region
+   Secret_RAM_Text_End : constant Unsigned_32;
+   pragma Import (Asm, Secret_RAM_Text_End, "__secret_ram_text_end");
+
    procedure Set_Private_Code_Region (
       First_Address : System.Address;
       Last_Address : System.Address)
-      with Pre => First_Address /= Null_Address and
-                  Last_Address /= Null_Address  and
-                  First_Address < Last_Address;
+      with Pre => To_Integer (First_Address) < To_Integer (Last_Address) and
+                  ((To_Integer (First_Address) >=
+                      To_Integer (Secret_Flash_Text_Start'Address) and
+                    To_Integer (Last_Address) <
+                      To_Integer (Secret_Flash_Text_End'Address)) or else
+                   (To_Integer (First_Address) >=
+                      To_Integer (Secret_RAM_Text_Start'Address)
+                    and
+                    To_Integer (Last_Address) <
+                      To_Integer (Secret_RAM_Text_End'Address)));
       --  with Inline;
 
    procedure Set_Private_Code_Region (
       First_Address : System.Address;
       Last_Address : System.Address;
       Old_Region : out Code_Region_Type)
-      with Pre => First_Address /= Null_Address and
-                  Last_Address /= Null_Address and
-                  First_Address < Last_Address,
+      with Pre => To_Integer (First_Address) < To_Integer (Last_Address) and
+                  ((To_Integer (First_Address) >=
+                      To_Integer (Secret_Flash_Text_Start'Address) and
+                    To_Integer (Last_Address) <
+                      To_Integer (Secret_Flash_Text_End'Address)) or else
+                   (To_Integer (First_Address) >=
+                      To_Integer (Secret_RAM_Text_Start'Address)
+                    and
+                    To_Integer (Last_Address) <
+                      To_Integer (Secret_RAM_Text_End'Address))),
            Post => Is_Valid_Code_Region (Old_Region);
       --  with Inline;
 
@@ -280,17 +321,9 @@ package Memory_Protection is
 
    procedure Dump_MPU_Region_Descriptors;
 
-   procedure Enable_Return_From_Fault;
-   --
-   --  Enable returning form a fault to the next instruction after the faulting
-   --  instruction.
-   --
-
-   function Fault_Happened return Boolean;
-   --
-   --  Return True if a fault happened, since the last call to
-   --  Enable_Return_From_Fault
-   --
+   function Size_Is_MPU_Region_Aligned (Size_In_Bits : Integer_Address)
+      return Boolean
+   is ((Size_In_Bits / Byte'Size) mod MPU_Region_Alignment = 0);
 
 private
 

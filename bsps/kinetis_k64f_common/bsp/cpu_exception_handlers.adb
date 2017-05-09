@@ -26,7 +26,6 @@
 --
 
 with System.Text_IO.Extended;
-with System.BB.CPU_Primitives;
 with System.Machine_Code;
 with System.Storage_Elements;
 with Memory_Protection;
@@ -104,7 +103,6 @@ package body Cpu_Exception_Handlers is
       end Dump_Fault_Status_Registers;
 
    begin
-      System.BB.CPU_Primitives.Disable_Interrupts;
       if Exception_Handler_Running then
          System.Text_IO.Extended.Put_String (
             "*** Another exception (" & Msg & ") happened while in " &
@@ -133,7 +131,7 @@ package body Cpu_Exception_Handlers is
             PSR_At_Exception : constant Unsigned_32  :=
                Stack (7);
             PC_At_Exception : constant Unsigned_32  :=
-               Stack (6); --  ??? - Instruction_Size;
+               Stack (6);
             LR_At_Exception : constant Unsigned_32  :=
                Stack (5);
          begin
@@ -159,22 +157,7 @@ package body Cpu_Exception_Handlers is
                PSR_At_Exception);
             System.Text_IO.Extended.New_Line;
 
-            if Memory_Protection.Is_Return_From_Fault_Enabled then
-               Memory_Protection.Set_Fault_Happened;
-
-               --
-               --  Change PC saved on the stack to point to the next
-               --  instruction after the instruction that caused the fault:
-               --
-               Stack (6) := LR_At_Exception - (2 * Instruction_Size);
-
-               --
-               --  Return from the exception to the next instruction after the
-               --  instruction that caused the fault:
-               --
-            else
-               raise Program_Error with Msg;
-            end if;
+            raise Program_Error with Msg;
          end;
       else
          System.Text_IO.Extended.Put_String (

@@ -1757,5 +1757,5 @@ package Kinetis_K64F.SCS is
 
    pragma Compile_Time_Error (SCS_Registers.SCB'Address /=
                               System'To_Address (16#E000ED00#),
-                              "SCB is address is wrong");
+                              "SCB address is wrong");
 end Kinetis_K64F.SCS;

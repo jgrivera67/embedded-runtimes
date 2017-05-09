@@ -37,7 +37,6 @@ with Ada.Unchecked_Conversion;
 with System.Address_To_Access_Conversions;
 
 package body Memory_Protection is
-   use Interfaces;
    use Kinetis_K64F.MPU;
    use Machine_Code;
    use Kinetis_K64F.SCS;
@@ -102,16 +101,6 @@ package body Memory_Protection is
    --  End address of the rodata section in flash
    Rom_End : constant Unsigned_32;
    pragma Import (Asm, Rom_End, "__rom_end");
-
-   --  Linker script symbol for the start address of the global RAM
-   --  text region
-   RAM_Text_Start : constant Unsigned_32;
-   pragma Import (Asm, RAM_Text_Start, "__ram_text_start");
-
-   --  Linker script symbol for the end address of the global RAM text
-   --  region
-   RAM_Text_End : constant Unsigned_32;
-   pragma Import (Asm, RAM_Text_End, "__ram_text_end");
 
    --  Linker script symbol for the start address of the global background
    --  data region. The global background data area spans to the end of the
@@ -715,45 +704,6 @@ package body Memory_Protection is
       end if;
    end Enable_MPU;
 
-   ------------------------------
-   -- Enable_Return_From_Fault --
-   ------------------------------
-
-   procedure Enable_Return_From_Fault
-   is
-      Old_Region : Data_Region_Type;
-      ACTLR_Value : ACTLR_Register;
-   begin
-      Set_Private_Object_Data_Region (Memory_Protection_Var'Address,
-                                      Memory_Protection_Var'Size,
-                                      Read_Write,
-                                      Old_Region);
-
-      Memory_Protection_Var.Return_From_Fault_Enabled := True;
-      Memory_Protection_Var.Fault_Happened_Flag := False;
-
-      Set_Private_Object_Data_Region (SCS_Registers'Address,
-                                      SCS_Registers'Size,
-                                      Read_Write);
-
-      --
-      --  Disable write buffer, so that precise write faults can be
-      --  generated:
-      --
-      ACTLR_Value := SCS_Registers.ACTLR;
-      ACTLR_Value.DISDEFWBUF := 1;
-      SCS_Registers.ACTLR := ACTLR_Value;
-      Memory_Barrier;
-      Restore_Private_Object_Data_Region (Old_Region);
-   end Enable_Return_From_Fault;
-
-   --------------------
-   -- Fault_Happened --
-   --------------------
-
-   function Fault_Happened return Boolean
-   is (Memory_Protection_Var.Fault_Happened_Flag);
-
    ----------------
    -- Initialize --
    ----------------
@@ -949,13 +899,6 @@ package body Memory_Protection is
 
    function Is_MPU_Enabled return Boolean is
       (Memory_Protection_Var.MPU_Enabled);
-
-   ----------------------------------
-   -- Is_Return_From_Fault_Enabled --
-   ----------------------------------
-
-   function Is_Return_From_Fault_Enabled return Boolean is
-      (Memory_Protection_Var.Return_From_Fault_Enabled);
 
    --------------------
    -- Memory_Barrier --
@@ -1374,42 +1317,6 @@ package body Memory_Protection is
                          Type2_Permissions);
 
    end Set_DMA_Region;
-
-   ------------------------
-   -- Set_Fault_Happened --
-   ------------------------
-
-   procedure Set_Fault_Happened
-   is
-      Old_Region : Data_Region_Type;
-      ACTLR_Value : ACTLR_Register;
-   begin
-      pragma Assert (Memory_Protection_Var.Return_From_Fault_Enabled);
-
-      Set_Private_Object_Data_Region (Memory_Protection_Var'Address,
-                                      Memory_Protection_Var'Size,
-                                      Read_Write,
-                                      Old_Region);
-
-      Memory_Protection_Var.Return_From_Fault_Enabled := False;
-      Memory_Protection_Var.Fault_Happened_Flag := True;
-
-      Set_Private_Object_Data_Region (SCS_Registers'Address,
-                                      SCS_Registers'Size,
-                                      Read_Write);
-
-      --
-      --  Re-enable write buffer
-      --
-      ACTLR_Value := SCS_Registers.ACTLR;
-      ACTLR_Value.DISDEFWBUF := 0;
-      SCS_Registers.ACTLR := ACTLR_Value;
-
-      Restore_Private_Object_Data_Region (Old_Region);
-      loop
-         null;
-      end loop;
-   end Set_Fault_Happened;
 
    -----------------------------
    -- Set_Private_Code_Region --
