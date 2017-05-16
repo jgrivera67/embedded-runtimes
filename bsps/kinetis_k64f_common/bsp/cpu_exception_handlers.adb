@@ -102,6 +102,8 @@ package body Cpu_Exception_Handlers is
          System.Text_IO.Extended.New_Line;
       end Dump_Fault_Status_Registers;
 
+      ICSR_Value : ICSR_Register;
+
    begin
       if Exception_Handler_Running then
          System.Text_IO.Extended.Put_String (
@@ -165,7 +167,13 @@ package body Cpu_Exception_Handlers is
          System.Text_IO.Extended.Print_Uint32_Hexadecimal (Return_Address);
          System.Text_IO.Extended.Put_String (", MSP=");
          System.Text_IO.Extended.Print_Uint32_Hexadecimal (Get_MSP_Register);
-         System.Text_IO.Extended.Put_String (")" & ASCII.LF);
+         ICSR_Value := SCS_Registers.SCB.ICSR;
+         System.Text_IO.Extended.Put_String (")" & ASCII.LF &
+            "SCB ICSR: Interrupt vector active: " &
+             ICSR_Value.VECTACTIVE'Image &
+            ", Highest priority interrupt vector pending: " &
+            ICSR_Value.VECTPENDING'Image & ASCII.LF);
+
          raise Program_Error with Msg;
       end if;
    end Common_Cpu_Exception_Handler;
