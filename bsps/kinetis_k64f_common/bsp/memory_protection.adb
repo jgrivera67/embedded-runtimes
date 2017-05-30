@@ -27,7 +27,6 @@
 
 with System.BB.Parameters;
 with System.Machine_Code;
-with Kinetis_K64F.MPU;
 with Kinetis_K64F.SCS;
 with System.Text_IO.Extended;
 with System.BB.Threads;
@@ -37,7 +36,6 @@ with Ada.Unchecked_Conversion;
 with System.Address_To_Access_Conversions;
 
 package body Memory_Protection is
-   use Kinetis_K64F.MPU;
    use Machine_Code;
    use Kinetis_K64F.SCS;
 
@@ -75,6 +73,27 @@ package body Memory_Protection is
 
    Debug_MPU_Enabled : constant Boolean := False;
 
+   --
+   --  Address range and permissions for a given thread-private data region
+   --
+   type Data_Region_Type is record
+      First_Address : System.Address;
+      Last_Address : System.Address;
+      Permissions : Data_Permissions_Type := None;
+   end record;
+
+   --
+   --  Address range and permissions for a given thread-private code region
+   --
+   type Code_Region_Type is record
+      First_Address : System.Address;
+      Last_Address : System.Address;
+      Enabled : Boolean := False;
+   end record;
+
+   --
+   --  Global stat eof the memory protection services
+   --
    type Memory_Protection_Type is record
       Initialized : Boolean := False;
       MPU_Enabled : Boolean := False;
@@ -169,37 +188,28 @@ package body Memory_Protection is
    --  associated with the corresponding MPU region Id.
    --
 
-   procedure Capture_Mpu_Region (
-      Region_Id : MPU_Region_Id_Type;
-      Bus_Master : Bus_Master_Type;
-      First_Address : out System.Address;
-      Last_Address : out System.Address;
-      Type1_Permissions : out Bus_Master_Permissions_Type1;
-      Type2_Permissions : out Bus_Master_Permissions_Type2)
-      with Pre => Memory_Protection_Var.Initialized
-                  and
-                  Region_Id > Global_RAM_Code_Region
-                  and
-                  Bus_Master /= Debugger;
-
    procedure Memory_Barrier;
 
-   procedure Save_Private_Code_Region (
-      Region : out Code_Region_Type)
-      with Pre => Memory_Protection_Var.Initialized;
-   --
-   --  Save the MPU state of the given private code region.
-   --
-
-   procedure Save_Private_Data_Region (
+   procedure Restore_MPU_Region_Descriptor (
       Region_Id : MPU_Region_Id_Type;
-      Region : out Data_Region_Type)
+      Saved_Region : MPU_Region_Descriptor_Type)
       with Pre => Memory_Protection_Var.Initialized
                   and
                   Region_Id in Thread_Stack_Data_Region ..
-                               Private_Object_Data_Region;
+                               Private_Code_Region;
    --
-   --  Save the MPU state of the given private data region.
+   --  Restore the MPU region descriptor for the given MPU region.
+   --
+
+   procedure Save_MPU_Region_Descriptor (
+      Region_Id : MPU_Region_Id_Type;
+      Saved_Region : out MPU_Region_Descriptor_Type)
+      with Pre => Memory_Protection_Var.Initialized
+                  and
+                  Region_Id in Thread_Stack_Data_Region ..
+                               Private_Code_Region;
+   --
+   --  Save the MPU region descriptor for the given MPU region.
    --
 
    procedure Undefine_MPU_Region (
@@ -226,62 +236,6 @@ package body Memory_Protection is
          System.BB.Threads.Thread_Descriptor);
 
    use Address_To_Thread_Id;
-
-   ------------------------
-   -- Capture_Mpu_Region --
-   ------------------------
-
-   procedure Capture_Mpu_Region (
-      Region_Id : MPU_Region_Id_Type;
-      Bus_Master : Bus_Master_Type;
-      First_Address : out System.Address;
-      Last_Address : out System.Address;
-      Type1_Permissions : out Bus_Master_Permissions_Type1;
-      Type2_Permissions : out Bus_Master_Permissions_Type2)
-   is
-      WORD2_Value : WORD2_Register_Type;
-      WORD3_Value : WORD3_Register_Type;
-      Region_Index : constant Region_Index_Type := Region_Id'Enum_Rep;
-      Old_Intr_Mask : Word;
-   begin
-      Old_Intr_Mask := Disable_Cpu_Interrupts;
-
-      First_Address :=
-         To_Address (Integer_Address (
-            MPU_Registers.Region_Descriptors (Region_Index).WORD0));
-
-      Last_Address :=
-         To_Address (Integer_Address (
-            MPU_Registers.Region_Descriptors (Region_Index).WORD1));
-
-      Type1_Permissions := (others => <>);
-      Type2_Permissions := (others => <>);
-
-      WORD3_Value := MPU_Registers.Region_Descriptors (Region_Index).WORD3;
-      if WORD3_Value.VLD = 1 then
-         WORD2_Value := MPU_Registers.Region_Descriptors (Region_Index).WORD2;
-         case Bus_Master is
-            when Cpu_Core0 =>
-               Type1_Permissions := WORD2_Value.Bus_Master_CPU_Core_Perms;
-            when Dma_Device_DMA_Engine =>
-               Type1_Permissions := WORD2_Value.Bus_Master_DMA_EZport_Perms;
-            when Dma_Device_ENET =>
-               Type1_Permissions := WORD2_Value.Bus_Master_ENET_Perms;
-            when Dma_Device_USB =>
-               Type2_Permissions := WORD2_Value.Bus_Master_USB_Perms;
-            when Dma_Device_SDHC =>
-               Type2_Permissions := WORD2_Value.Bus_Master_SDHC_Perms;
-            when Dma_Device_Master6 =>
-               Type2_Permissions := WORD2_Value.Bus_Master6_Perms;
-            when Dma_Device_Master7 =>
-               Type2_Permissions := WORD2_Value.Bus_Master7_Perms;
-            when others =>
-               pragma Assert (False);
-         end case;
-      end if;
-
-      Restore_Cpu_Interrupts (Old_Intr_Mask);
-   end Capture_Mpu_Region;
 
    -----------------------
    -- Define_MPU_Region --
@@ -628,6 +582,17 @@ package body Memory_Protection is
       Thread_Id_Addr : constant Address :=
          To_Address (Address_To_Thread_Id.Object_Pointer (Calling_Thread_Id));
 
+      Saved_Region : MPU_Region_Descriptor_Type;
+      WORD0_As_Integer : Unsigned_32
+         with Address => Saved_Region.WORD0_Value'Address;
+      WORD1_As_Integer : Unsigned_32
+         with Address => Saved_Region.WORD1_Value'Address;
+      WORD2_As_Integer : Unsigned_32
+         with Address => Saved_Region.WORD2_Value'Address;
+      WORD3_As_Integer : Unsigned_32
+         with Address => Saved_Region.WORD3_Value'Address;
+      RGDAAC_Value : RGDAAC_Register_Type;
+      RGDAAC_As_Integer : Unsigned_32 with Address => RGDAAC_Value'Address;
    begin
       System.Text_IO.Extended.Put_String (
          "Current thread pointer ");
@@ -636,34 +601,23 @@ package body Memory_Protection is
       System.Text_IO.Extended.Put_String (
          ASCII.LF & "MPU region descriptors:" & ASCII.LF);
 
-      for I in Region_Index_Type loop
-         declare
-            Word0_Val : Unsigned_32 with Address =>
-               MPU_Registers.Region_Descriptors (I).WORD0'Address;
-            Word1_Val : Unsigned_32 with Address =>
-               MPU_Registers.Region_Descriptors (I).WORD1'Address;
-            Word2_Val : Unsigned_32 with Address =>
-               MPU_Registers.Region_Descriptors (I).WORD2'Address;
-            Word3_Val : Unsigned_32 with Address =>
-               MPU_Registers.Region_Descriptors (I).WORD3'Address;
-            RGDAAC_Val : Unsigned_32 with Address =>
-               MPU_Registers.RGDAAC (I)'Address;
-         begin
-            System.Text_IO.Extended.Put_String (
-               ASCII.HT & "Region" & I'Image & " (");
-            Print_Region_Name (MPU_Region_Id_Type'Val (I));
-            System.Text_IO.Extended.Put_String ("): Word0=");
-            System.Text_IO.Extended.Print_Uint32_Hexadecimal (Word0_Val);
-            System.Text_IO.Extended.Put_String (", Word1=");
-            System.Text_IO.Extended.Print_Uint32_Hexadecimal (Word1_Val);
-            System.Text_IO.Extended.Put_String (", Word2=");
-            System.Text_IO.Extended.Print_Uint32_Hexadecimal (Word2_Val);
-            System.Text_IO.Extended.Put_String (", Word3=");
-            System.Text_IO.Extended.Print_Uint32_Hexadecimal (Word3_Val);
-            System.Text_IO.Extended.Put_String (", RGDAAC=");
-            System.Text_IO.Extended.Print_Uint32_Hexadecimal (RGDAAC_Val);
-            System.Text_IO.Extended.New_Line;
-         end;
+      for Region_Id in MPU_Region_Id_Type loop
+         Save_MPU_Region_Descriptor (Region_Id, Saved_Region);
+         RGDAAC_Value :=  MPU_Registers.RGDAAC (Region_Id'Enum_Rep);
+         System.Text_IO.Extended.Put_String (
+            ASCII.HT & "Region" & Region_Id'Image & " (");
+         Print_Region_Name (Region_Id);
+         System.Text_IO.Extended.Put_String ("): Word0=");
+         System.Text_IO.Extended.Print_Uint32_Hexadecimal (WORD0_As_Integer);
+         System.Text_IO.Extended.Put_String (", Word1=");
+         System.Text_IO.Extended.Print_Uint32_Hexadecimal (WORD1_As_Integer);
+         System.Text_IO.Extended.Put_String (", Word2=");
+         System.Text_IO.Extended.Print_Uint32_Hexadecimal (WORD2_As_Integer);
+         System.Text_IO.Extended.Put_String (", Word3=");
+         System.Text_IO.Extended.Print_Uint32_Hexadecimal (WORD3_As_Integer);
+         System.Text_IO.Extended.Put_String (", RGDAAC=");
+         System.Text_IO.Extended.Print_Uint32_Hexadecimal (RGDAAC_As_Integer);
+         System.Text_IO.Extended.New_Line;
       end loop;
    end Dump_MPU_Region_Descriptors;
 
@@ -673,7 +627,7 @@ package body Memory_Protection is
 
    procedure Enable_MPU (Enable_Precise_Write_Faults : Boolean := False) is
       ACTLR_Value : ACTLR_Register;
-      Old_Region : Data_Region_Type;
+      Old_Region : MPU_Region_Descriptor_Type;
    begin
       if not System.BB.Parameters.Use_MPU then
          return;
@@ -881,16 +835,36 @@ package body Memory_Protection is
    ------------------------------------
 
    procedure Initialize_Private_Data_Region (
-         Region : out Data_Region_Type;
+         Region : out MPU_Region_Descriptor_Type;
          First_Address : System.Address;
          Last_Address : System.Address;
          Permissions : Data_Permissions_Type)
    is
-   begin
-      Region := (First_Address => First_Address,
-                 Last_Address => Last_Address,
-                 Permissions => Permissions);
+      Rounded_Down_First_Address : constant System.Address :=
+         Round_Down_Address (First_Address, MPU_Region_Alignment);
+      Rounded_Up_Last_Address : constant System.Address :=
+         Round_Up_Address (Last_Address, MPU_Region_Alignment);
+      Type1_Read_Write_Permissions : constant Bus_Master_Permissions_Type1 :=
+         (User_Mode_Permissions => (Execute_Allowed => 0,
+                                    Write_Allowed => 1,
+                                    Read_Allowed => 1),
+          others => <>);
 
+      Type1_Read_Only_Permissions : constant Bus_Master_Permissions_Type1 :=
+         (User_Mode_Permissions => (Execute_Allowed => 0,
+                                    Write_Allowed => 0,
+                                    Read_Allowed => 1),
+          others => <>);
+
+      Type1_Permissions : constant Bus_Master_Permissions_Type1 :=
+         (if Permissions = Read_Write then Type1_Read_Write_Permissions
+                                      else Type1_Read_Only_Permissions);
+   begin
+      Region.WORD0_Value :=
+         Unsigned_32 (To_Integer (Rounded_Down_First_Address));
+      Region.WORD1_Value := Unsigned_32 (To_Integer (Rounded_Up_Last_Address));
+      Region.WORD2_Value.Bus_Master_CPU_Core_Perms := Type1_Permissions;
+      Region.WORD3_Value.VLD := 1;
    end Initialize_Private_Data_Region;
 
    --------------------
@@ -926,19 +900,40 @@ package body Memory_Protection is
       end if;
    end Restore_Cpu_Interrupts;
 
+   -----------------------------------
+   -- Restore_MPU_Region_Descriptor --
+   -----------------------------------
+
+   procedure Restore_MPU_Region_Descriptor (
+      Region_Id : MPU_Region_Id_Type;
+      Saved_Region : MPU_Region_Descriptor_Type)
+   is
+      Region_Index : constant Region_Index_Type := Region_Id'Enum_Rep;
+   begin
+      MPU_Registers.Region_Descriptors (Region_Index).WORD0 :=
+         Saved_Region.WORD0_Value;
+      MPU_Registers.Region_Descriptors (Region_Index).WORD1 :=
+         Saved_Region.WORD1_Value;
+      MPU_Registers.Region_Descriptors (Region_Index).WORD2 :=
+         Saved_Region.WORD2_Value;
+      MPU_Registers.Region_Descriptors (Region_Index).WORD3 :=
+         Saved_Region.WORD3_Value;
+      Memory_Barrier;
+   end Restore_MPU_Region_Descriptor;
+
    ---------------------------------
    -- Restore_Private_Code_Region --
    ---------------------------------
 
    procedure Restore_Private_Code_Region (
-      Saved_Region : Code_Region_Type)
+      Saved_Region : MPU_Region_Descriptor_Type)
    is
    begin
       if not System.BB.Parameters.Use_MPU then
          return;
       end if;
 
-      Define_Private_Code_Region (Region => Saved_Region);
+      Restore_MPU_Region_Descriptor (Private_Code_Region, Saved_Region);
    end Restore_Private_Code_Region;
 
    ----------------------------------------
@@ -946,16 +941,16 @@ package body Memory_Protection is
    ----------------------------------------
 
    procedure Restore_Private_Object_Data_Region (
-      Saved_Region : Data_Region_Type)
+      Saved_Region : MPU_Region_Descriptor_Type)
+
    is
+
    begin
       if not System.BB.Parameters.Use_MPU then
          return;
       end if;
 
-      Define_Private_Data_Region (
-           Region_Id => Private_Object_Data_Region,
-           Region => Saved_Region);
+      Restore_MPU_Region_Descriptor (Private_Object_Data_Region, Saved_Region);
    end Restore_Private_Object_Data_Region;
 
    --------------------------------
@@ -975,26 +970,17 @@ package body Memory_Protection is
       pragma Assert (System.BB.CPU_Primitives.Multiprocessors.Current_CPU =
                      CPU'First);
 
-      Define_Private_Data_Region (
+      Restore_MPU_Region_Descriptor (
          Region_Id => Thread_Stack_Data_Region,
-         Region => Thread_Regions.Stack_Region);
+         Saved_Region => Thread_Regions.Stack_Region);
 
-      if Thread_Regions.Private_Object_Data_Region.Permissions /= None then
-         Define_Private_Data_Region (
-           Region_Id => Private_Object_Data_Region,
-           Region => Thread_Regions.Private_Object_Data_Region);
-      else
-         Undefine_MPU_Region (
-            Region_Id => Private_Object_Data_Region);
-      end if;
+      Restore_MPU_Region_Descriptor (
+         Region_Id => Private_Object_Data_Region,
+         Saved_Region => Thread_Regions.Private_Object_Data_Region);
 
-      if Thread_Regions.Private_Code_Region.Enabled then
-         Define_Private_Code_Region (
-           Region => Thread_Regions.Private_Code_Region);
-      else
-         Undefine_MPU_Region (
-            Region_Id => Private_Code_Region);
-      end if;
+      Restore_MPU_Region_Descriptor (
+         Region_Id => Private_Code_Region,
+         Saved_Region => Thread_Regions.Private_Code_Region);
 
       Set_CPU_Writable_Background_Region (
          Thread_Regions.Writable_Background_Region_Enabled);
@@ -1042,72 +1028,25 @@ package body Memory_Protection is
                               return System.Address
    is (To_Address (Round_Up (To_Integer (Address), Alignment)));
 
-   ------------------------------
-   -- Save_Private_Code_Region --
-   ------------------------------
+   --------------------------------
+   -- Save_MPU_Region_Descriptor --
+   --------------------------------
 
-   procedure Save_Private_Code_Region (
-       Region : out Code_Region_Type)
-   is
-      Type1_Permissions : Bus_Master_Permissions_Type1;
-      Type2_Permissions : Bus_Master_Permissions_Type2 with Unreferenced;
-   begin
-      Capture_Mpu_Region (
-            Private_Code_Region,
-            Cpu_Core0,
-            Region.First_Address,
-            Region.Last_Address,
-            Type1_Permissions,
-            Type2_Permissions);
-
-      pragma Assert (
-        Type1_Permissions.User_Mode_Permissions.Write_Allowed = 0);
-
-      if Type1_Permissions.User_Mode_Permissions.Execute_Allowed = 1 then
-         pragma Assert (
-            Type1_Permissions.User_Mode_Permissions.Read_Allowed = 1);
-
-         Region.Enabled := True;
-      else
-         pragma Assert (
-            Type1_Permissions.User_Mode_Permissions.Read_Allowed = 0);
-
-         Region.Enabled := False;
-      end if;
-   end Save_Private_Code_Region;
-
-   ------------------------------
-   -- Save_Private_Data_Region --
-   ------------------------------
-
-   procedure Save_Private_Data_Region (
+   procedure Save_MPU_Region_Descriptor (
       Region_Id : MPU_Region_Id_Type;
-      Region : out Data_Region_Type)
+      Saved_Region : out MPU_Region_Descriptor_Type)
    is
-      Type1_Permissions : Bus_Master_Permissions_Type1;
-      Type2_Permissions : Bus_Master_Permissions_Type2 with Unreferenced;
+      Region_Index : constant Region_Index_Type := Region_Id'Enum_Rep;
    begin
-      Capture_Mpu_Region (
-            Region_Id,
-            Cpu_Core0,
-            Region.First_Address,
-            Region.Last_Address,
-            Type1_Permissions,
-            Type2_Permissions);
-
-      pragma Assert (
-         Type1_Permissions.User_Mode_Permissions.Execute_Allowed = 0);
-
-      if Type1_Permissions.User_Mode_Permissions.Write_Allowed = 1 then
-         pragma Assert (
-            Type1_Permissions.User_Mode_Permissions.Read_Allowed = 1);
-         Region.Permissions := Read_Write;
-      elsif Type1_Permissions.User_Mode_Permissions.Read_Allowed = 1 then
-         Region.Permissions := Read_Only;
-      else
-         Region.Permissions := None;
-      end if;
-   end Save_Private_Data_Region;
+      Saved_Region.WORD0_Value :=
+         MPU_Registers.Region_Descriptors (Region_Index).WORD0;
+      Saved_Region.WORD1_Value :=
+         MPU_Registers.Region_Descriptors (Region_Index).WORD1;
+      Saved_Region.WORD2_Value :=
+         MPU_Registers.Region_Descriptors (Region_Index).WORD2;
+      Saved_Region.WORD3_Value :=
+         MPU_Registers.Region_Descriptors (Region_Index).WORD3;
+   end Save_MPU_Region_Descriptor;
 
    -----------------------------
    -- Save_Thread_MPU_Regions --
@@ -1141,16 +1080,17 @@ package body Memory_Protection is
       --
       Thread_Regions.Writable_Background_Region_Enabled := Old_Enabled;
 
-      Save_Private_Data_Region (
+      Save_MPU_Region_Descriptor (
          Region_Id => Thread_Stack_Data_Region,
-         Region => Thread_Regions.Stack_Region);
+         Saved_Region => Thread_Regions.Stack_Region);
 
-      Save_Private_Data_Region (
+      Save_MPU_Region_Descriptor (
          Region_Id => Private_Object_Data_Region,
-         Region => Thread_Regions.Private_Object_Data_Region);
+         Saved_Region => Thread_Regions.Private_Object_Data_Region);
 
-      Save_Private_Code_Region (
-         Region => Thread_Regions.Private_Code_Region);
+      Save_MPU_Region_Descriptor (
+         Region_Id => Private_Code_Region,
+         Saved_Region => Thread_Regions.Private_Code_Region);
 
       --
       --  NOTE: We return leaving the background region enabled for writing
@@ -1347,7 +1287,7 @@ package body Memory_Protection is
    procedure Set_Private_Code_Region (
       First_Address : System.Address;
       Last_Address : System.Address;
-      Old_Region : out Code_Region_Type)
+      Old_Region : out MPU_Region_Descriptor_Type)
    is
       New_Region : constant Code_Region_Type :=
          (First_Address => Round_Down_Address (First_Address,
@@ -1360,7 +1300,9 @@ package body Memory_Protection is
          return;
       end if;
 
-      Save_Private_Code_Region (Region => Old_Region);
+      Save_MPU_Region_Descriptor (Region_Id => Private_Code_Region,
+                                  Saved_Region => Old_Region);
+
       Define_Private_Code_Region (Region => New_Region);
    end Set_Private_Code_Region;
 
@@ -1398,7 +1340,7 @@ package body Memory_Protection is
       Start_Address : System.Address;
       Size_In_Bits : Integer_Address;
       Permissions : Data_Permissions_Type;
-      Old_Region : out Data_Region_Type)
+      Old_Region : out MPU_Region_Descriptor_Type)
    is
       New_Region : constant Data_Region_Type :=
          (First_Address => Round_Down_Address (Start_Address,
@@ -1412,9 +1354,8 @@ package body Memory_Protection is
          return;
       end if;
 
-      Save_Private_Data_Region (
-         Region_Id => Private_Object_Data_Region,
-         Region => Old_Region);
+      Save_MPU_Region_Descriptor (Region_Id => Private_Object_Data_Region,
+                                  Saved_Region => Old_Region);
 
       Define_Private_Data_Region (
            Region_Id => Private_Object_Data_Region,

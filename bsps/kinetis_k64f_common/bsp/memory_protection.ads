@@ -34,6 +34,7 @@ pragma Restrictions (No_Elaboration_Code);
 
 with System.Storage_Elements;
 with Interfaces.Bit_Types;
+private with Kinetis_K64F.MPU;
 
 --
 --  @summary Memory Protection Services
@@ -90,14 +91,9 @@ package Memory_Protection is
                                DMA_Region3 => 11);
 
    --
-   --  Address range and permissions for a given thread-private data region
+   --  Saved MPU region descriptor
    --
-   type Data_Region_Type is private;
-
-   --
-   --  Address range and permissions for a given thread-private code region
-   --
-   type Code_Region_Type is private;
+   type MPU_Region_Descriptor_Type is private;
 
    --
    --  Thread-private MPU regions
@@ -112,23 +108,17 @@ package Memory_Protection is
    --  read-only (false).
    --
    type Thread_Regions_Type is limited record
-      Stack_Region : Data_Region_Type;
-      Private_Object_Data_Region : Data_Region_Type;
-      Private_Code_Region : Code_Region_Type;
+      Stack_Region : MPU_Region_Descriptor_Type;
+      Private_Object_Data_Region : MPU_Region_Descriptor_Type;
+      Private_Code_Region : MPU_Region_Descriptor_Type;
       Writable_Background_Region_Enabled : Boolean := False;
-   end record;
+   end record with Volatile;
 
    type Thread_Regions_Access_Type is access all Thread_Regions_Type;
 
    type Data_Permissions_Type is (None,
                                   Read_Only,
                                   Read_Write);
-
-   function Is_Valid_Data_Region (Region : Data_Region_Type)
-      return Boolean;
-
-   function Is_Valid_Code_Region (Region : Code_Region_Type)
-      return Boolean;
 
    -------------------------------------------------------------------
    --  Subprograms to be invoked only from the Ada runtime library  --
@@ -182,7 +172,7 @@ package Memory_Protection is
    --
 
    procedure Initialize_Private_Data_Region (
-         Region : out Data_Region_Type;
+         Region : out MPU_Region_Descriptor_Type;
          First_Address : System.Address;
          Last_Address : System.Address;
          Permissions : Data_Permissions_Type)
@@ -191,13 +181,12 @@ package Memory_Protection is
                      To_Integer (First_Address) < To_Integer (Last_Address) and
                      Permissions /= None;
 
-   procedure Restore_Private_Code_Region (Saved_Region : Code_Region_Type)
-      with Pre => Is_Valid_Code_Region (Saved_Region);
+   procedure Restore_Private_Code_Region (
+      Saved_Region : MPU_Region_Descriptor_Type);
       --  with Inline;
 
    procedure Restore_Private_Object_Data_Region (
-      Saved_Region : Data_Region_Type)
-      with Pre => Is_Valid_Data_Region (Saved_Region);
+      Saved_Region : MPU_Region_Descriptor_Type);
       --  with Inline;
 
    --  Linker script symbol for the start address of the global RAM
@@ -248,7 +237,7 @@ package Memory_Protection is
    procedure Set_Private_Code_Region (
       First_Address : System.Address;
       Last_Address : System.Address;
-      Old_Region : out Code_Region_Type)
+      Old_Region : out MPU_Region_Descriptor_Type)
       with Pre => To_Integer (First_Address) < To_Integer (Last_Address) and
                   ((To_Integer (First_Address) >=
                       To_Integer (Secret_Flash_Text_Start'Address) and
@@ -258,8 +247,7 @@ package Memory_Protection is
                       To_Integer (Secret_RAM_Text_Start'Address)
                     and
                     To_Integer (Last_Address) <
-                      To_Integer (Secret_RAM_Text_End'Address))),
-           Post => Is_Valid_Code_Region (Old_Region);
+                      To_Integer (Secret_RAM_Text_End'Address)));
       --  with Inline;
 
    procedure Unset_Private_Code_Region;
@@ -278,12 +266,11 @@ package Memory_Protection is
       Start_Address : System.Address;
       Size_In_Bits : Integer_Address;
       Permissions : Data_Permissions_Type;
-      Old_Region : out Data_Region_Type)
+      Old_Region : out MPU_Region_Descriptor_Type)
       with Pre => Start_Address /= Null_Address and
                   Size_In_Bits > 0 and
                   Size_In_Bits mod Byte'Size = 0 and
-                  Permissions /= None,
-           Post => Is_Valid_Data_Region (Old_Region);
+                  Permissions /= None;
       --  with Inline;
 
    procedure Unset_Private_Object_Data_Region;
@@ -326,51 +313,16 @@ package Memory_Protection is
    is ((Size_In_Bits / Byte'Size) mod MPU_Region_Alignment = 0);
 
 private
+   use Kinetis_K64F.MPU;
 
    --
-   --  Address range and permissions for a given thread-private data region
+   --  Saved MPU region descriptor
    --
-   type Data_Region_Type is record
-      First_Address : System.Address;
-      Last_Address : System.Address;
-      Permissions : Data_Permissions_Type := None;
-   end record;
-
-   --
-   --  Address range and permissions for a given thread-private code region
-   --
-   type Code_Region_Type is record
-      First_Address : System.Address;
-      Last_Address : System.Address;
-      Enabled : Boolean := False;
-   end record;
-
-   --------------------------
-   -- Is_Valid_Data_Region --
-   --------------------------
-
-   function Is_Valid_Data_Region (Region : Data_Region_Type)
-      return Boolean is
-   (if Region.Permissions /= None then
-       To_Integer (Region.First_Address) <
-                      To_Integer (Region.Last_Address)
-       and
-       To_Integer (Region.First_Address) mod MPU_Region_Alignment = 0
-       and
-       (To_Integer (Region.Last_Address) + 1) mod MPU_Region_Alignment = 0);
-
-   --------------------------
-   -- Is_Valid_Code_Region --
-   --------------------------
-
-   function Is_Valid_Code_Region (Region : Code_Region_Type)
-      return Boolean is
-   (if Region.Enabled then
-       To_Integer (Region.First_Address) <
-                   To_Integer (Region.Last_Address)
-       and
-       To_Integer (Region.First_Address) mod MPU_Region_Alignment = 0
-       and
-       (To_Integer (Region.Last_Address) + 1) mod MPU_Region_Alignment = 0);
+   type MPU_Region_Descriptor_Type is record
+      WORD0_Value : WORD0_Register_Type;
+      WORD1_Value : WORD1_Register_Type;
+      WORD2_Value : WORD2_Register_Type;
+      WORD3_Value : WORD3_Register_Type;
+   end record with Volatile;
 
 end Memory_Protection;

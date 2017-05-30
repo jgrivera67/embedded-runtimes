@@ -150,16 +150,12 @@ SECTIONS
    *(.bss .bss.*)
    *(COMMON)
 
-   . = ALIGN(0x8);    /* Align the stack to 64 bits */
-   __bss_end = .;
-
    . = ALIGN(MPU_REGION_ALIGNMENT);
+   __bss_end = .;
    __interrupt_stack_start = .;
    *(.interrupt_stacks)
    . = ALIGN(MPU_REGION_ALIGNMENT);
    __interrupt_stack_end = .;
-
-   . = ALIGN(MPU_REGION_ALIGNMENT);
    __stack_start = .;
    . += DEFINED (_STACK_SIZE) ? _STACK_SIZE : _DEFAULT_STACK_SIZE;
    . = ALIGN(MPU_REGION_ALIGNMENT);

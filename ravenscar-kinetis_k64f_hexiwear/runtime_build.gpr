@@ -25,7 +25,6 @@ project Runtime_Build is
 
          for Source_Dirs use ("../bsps/kinetis_k64f_hexiwear/bsp",
                               "../bsps/kinetis_k64f_common/bsp",
-                              "../bsps/common",
                               "../base_runtimes/ravenscar-sfp/arch",
                               "../base_runtimes/ravenscar-sfp/common");
          for Runtime ("Ada") use Project'Project_Dir & "sfp";
@@ -35,7 +34,6 @@ project Runtime_Build is
 
          for Source_Dirs use ("../bsps/kinetis_k64f_hexiwear/bsp",
                               "../bsps/kinetis_k64f_common/bsp",
-                              "../bsps/common",
                               "../base_runtimes/ravenscar-full/arch",
                               "../base_runtimes/ravenscar-full/common",
                               "../base_runtimes/ravenscar-full/math");
