@@ -867,6 +867,53 @@ package body Memory_Protection is
       Region.WORD3_Value.VLD := 1;
    end Initialize_Private_Data_Region;
 
+   ------------------------------------
+   -- Initialize_Private_Data_Region --
+   ------------------------------------
+
+   procedure Initialize_Private_Data_Region (
+      Region : out MPU_Region_Descriptor_Type;
+      Start_Address : System.Address;
+      Size_In_Bits : Integer_Address;
+      Permissions : Data_Permissions_Type)
+   is
+      Size_In_Bytes : constant Integer_Address := Size_In_Bits / Byte'Size;
+      Last_Address : constant Address :=
+         To_Address (Round_Up (To_Integer (Start_Address) + Size_In_Bytes,
+                               MPU_Region_Alignment) - 1);
+   begin
+      Initialize_Private_Data_Region (Region,
+                                      Start_Address,
+                                      Last_Address,
+                                      Permissions);
+   end Initialize_Private_Data_Region;
+
+   ------------------------------------
+   -- Initialize_Private_Code_Region --
+   ------------------------------------
+
+   procedure Initialize_Private_Code_Region (
+      Region : out MPU_Region_Descriptor_Type;
+      First_Address : System.Address;
+      Last_Address : System.Address)
+   is
+      Rounded_Down_First_Address : constant System.Address :=
+         Round_Down_Address (First_Address, MPU_Region_Alignment);
+      Rounded_Up_Last_Address : constant System.Address :=
+         Round_Up_Address (Last_Address, MPU_Region_Alignment);
+      Type1_Permissions : constant Bus_Master_Permissions_Type1 :=
+         (User_Mode_Permissions => (Execute_Allowed => 1,
+                                    Write_Allowed => 0,
+                                    Read_Allowed => 1),
+          others => <>);
+   begin
+      Region.WORD0_Value :=
+         Unsigned_32 (To_Integer (Rounded_Down_First_Address));
+      Region.WORD1_Value := Unsigned_32 (To_Integer (Rounded_Up_Last_Address));
+      Region.WORD2_Value.Bus_Master_CPU_Core_Perms := Type1_Permissions;
+      Region.WORD3_Value.VLD := 1;
+   end Initialize_Private_Code_Region;
+
    --------------------
    -- Is_MPU_Enabled --
    --------------------
@@ -1306,6 +1353,22 @@ package body Memory_Protection is
       Define_Private_Code_Region (Region => New_Region);
    end Set_Private_Code_Region;
 
+   -----------------------------
+   -- Set_Private_Code_Region --
+   -----------------------------
+
+   procedure Set_Private_Code_Region (
+      New_Region : MPU_Region_Descriptor_Type;
+      Old_Region : out MPU_Region_Descriptor_Type)
+   is
+   begin
+      Save_MPU_Region_Descriptor (Region_Id => Private_Code_Region,
+                                  Saved_Region => Old_Region);
+
+      Restore_MPU_Region_Descriptor (Region_Id => Private_Code_Region,
+                                     Saved_Region => New_Region);
+   end Set_Private_Code_Region;
+
    ------------------------------------
    -- Set_Private_Object_Data_Region --
    ------------------------------------
@@ -1362,6 +1425,23 @@ package body Memory_Protection is
            Region => New_Region);
    end Set_Private_Object_Data_Region;
 
+   ------------------------------------
+   -- Set_Private_Object_Data_Region --
+   ------------------------------------
+
+   procedure Set_Private_Object_Data_Region (
+      New_Region : MPU_Region_Descriptor_Type;
+      Old_Region : out MPU_Region_Descriptor_Type)
+   is
+   begin
+      Save_MPU_Region_Descriptor (Region_Id => Private_Object_Data_Region,
+                                  Saved_Region => Old_Region);
+
+      Restore_MPU_Region_Descriptor (Region_Id => Private_Object_Data_Region,
+                                     Saved_Region => New_Region);
+
+   end Set_Private_Object_Data_Region;
+
    -------------------------
    -- Undefine_MPU_Region --
    -------------------------
@@ -1389,9 +1469,9 @@ package body Memory_Protection is
       Undefine_MPU_Region (Region_Id);
    end Unset_DMA_Region;
 
-   ------------------------------
+   -------------------------------
    -- Unset_Private_Code_Region --
-   ------------------------------
+   -------------------------------
 
    procedure Unset_Private_Code_Region
    is

@@ -32,7 +32,6 @@ with System.BB.Threads;
 with System.Multiprocessors;
 with System.BB.CPU_Primitives.Multiprocessors;
 with System.Address_To_Access_Conversions;
-with Ada.Unchecked_Conversion;
 
 package body Memory_Protection is
    use Machine_Code;
@@ -650,10 +649,10 @@ package body Memory_Protection is
    ------------------------------------
 
    procedure Initialize_Private_Data_Region (
-         Region : out MPU_Region_Descriptor_Type;
-         First_Address : System.Address;
-         Last_Address : System.Address;
-         Permissions : Data_Permissions_Type)
+      Region : out MPU_Region_Descriptor_Type;
+      First_Address : System.Address;
+      Last_Address : System.Address;
+      Permissions : Data_Permissions_Type)
    is
       Rounded_Up_Region_Size : Integer_Address;
       Rounded_Down_First_Address : Address;
@@ -702,6 +701,78 @@ package body Memory_Protection is
                                       XN => 1,
                                       others => <>));
    end Initialize_Private_Data_Region;
+
+   ------------------------------------
+   -- Initialize_Private_Data_Region --
+   ------------------------------------
+
+   procedure Initialize_Private_Data_Region (
+      Region : out MPU_Region_Descriptor_Type;
+      Start_Address : System.Address;
+      Size_In_Bits : Integer_Address;
+      Permissions : Data_Permissions_Type)
+   is
+      Last_Address : constant System.Address :=
+         Memory_Protection.Last_Address (Start_Address, Size_In_Bits);
+   begin
+      Initialize_Private_Data_Region (Region,
+                                      Start_Address,
+                                      Last_Address,
+                                      Permissions);
+   end Initialize_Private_Data_Region;
+
+   ------------------------------------
+   -- Initialize_Private_Code_Region --
+   ------------------------------------
+
+   procedure Initialize_Private_Code_Region (
+      Region : out MPU_Region_Descriptor_Type;
+      First_Address : System.Address;
+      Last_Address : System.Address)
+   is
+      Rounded_Up_Region_Size : Integer_Address;
+      Rounded_Down_First_Address : Address;
+      Rounded_Up_Last_Address : Address;
+      Subregions_Disabled_Mask : Subregions_Disabled_Mask_Type;
+      ADDR_Value : UInt27;
+      Encoded_Region_Size : Encoded_Region_Size_Type;
+   begin
+      Rounded_Up_Region_Size :=
+         Round_Up_Region_Size_To_Power_Of_2 (
+            To_Integer (Last_Address) - To_Integer (First_Address) + 1);
+      Rounded_Down_First_Address :=
+         Round_Down_Address (First_Address, Rounded_Up_Region_Size);
+
+      if To_Integer (Last_Address) = Integer_Address (Unsigned_32'Last) then
+         Rounded_Up_Last_Address := Last_Address;
+      else
+         Rounded_Up_Last_Address :=
+            To_Address (To_Integer (
+               Round_Up_Address (To_Address (To_Integer (Last_Address) + 1),
+                                 Rounded_Up_Region_Size)) - 1);
+      end if;
+
+      Build_Disabled_Subregions_Mask (
+         Rounded_Down_First_Address,
+         Rounded_Up_Last_Address,
+         First_Address,
+         Last_Address,
+         Subregions_Disabled_Mask);
+
+      Encoded_Region_Size := Encode_Region_Size (Rounded_Up_Region_Size);
+      ADDR_Value := UInt27 (
+         Shift_Right (Unsigned_32 (To_Integer (Rounded_Down_First_Address)),
+                      5));
+      Region.RBAR_Value := (ADDR => ADDR_Value,
+                            others => <>);
+      Region.RASR_Value :=
+         (ENABLE => 1,
+          SIZE => Encoded_Region_Size,
+          SRD => Subregions_Disabled_Mask,
+          ATTRS => (AP => Privileged_Read_Only_Unprivileged_No_Access,
+                    XN => 0,
+                    others => <>));
+   end Initialize_Private_Code_Region;
 
    --------------------
    -- Is_MPU_Enabled --
@@ -1067,6 +1138,22 @@ package body Memory_Protection is
                          Execute_Permission => True);
    end Set_Private_Code_Region;
 
+   -----------------------------
+   -- Set_Private_Code_Region --
+   -----------------------------
+
+   procedure Set_Private_Code_Region (
+      New_Region : MPU_Region_Descriptor_Type;
+      Old_Region : out MPU_Region_Descriptor_Type)
+   is
+   begin
+      Save_MPU_Region_Descriptor (Region_Id => Private_Code_Region,
+                                  Saved_Region => Old_Region);
+
+      Restore_MPU_Region_Descriptor (Region_Id => Private_Code_Region,
+                                     Saved_Region => New_Region);
+   end Set_Private_Code_Region;
+
    ------------------------------------
    -- Set_Private_Object_Data_Region --
    ------------------------------------
@@ -1122,6 +1209,23 @@ package body Memory_Protection is
                          Read_Write_Permissions);
    end Set_Private_Object_Data_Region;
 
+   ------------------------------------
+   -- Set_Private_Object_Data_Region --
+   ------------------------------------
+
+   procedure Set_Private_Object_Data_Region (
+      New_Region : MPU_Region_Descriptor_Type;
+      Old_Region : out MPU_Region_Descriptor_Type)
+   is
+   begin
+      Save_MPU_Region_Descriptor (Region_Id => Private_Object_Data_Region,
+                                  Saved_Region => Old_Region);
+
+      Restore_MPU_Region_Descriptor (Region_Id => Private_Object_Data_Region,
+                                     Saved_Region => New_Region);
+
+   end Set_Private_Object_Data_Region;
+
    -------------------------
    -- Undefine_MPU_Region --
    -------------------------
@@ -1140,9 +1244,9 @@ package body Memory_Protection is
       MPU_Registers.MPU_RASR := (ENABLE => 0, others => <>);
    end Undefine_MPU_Region;
 
-   ------------------------------
+   -------------------------------
    -- Unset_Private_Code_Region --
-   ------------------------------
+   -------------------------------
 
    procedure Unset_Private_Code_Region
    is

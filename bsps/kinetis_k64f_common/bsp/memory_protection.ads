@@ -181,6 +181,24 @@ package Memory_Protection is
                      To_Integer (First_Address) < To_Integer (Last_Address) and
                      Permissions /= None;
 
+   procedure Initialize_Private_Data_Region (
+      Region : out MPU_Region_Descriptor_Type;
+      Start_Address : System.Address;
+      Size_In_Bits : Integer_Address;
+      Permissions : Data_Permissions_Type)
+      with Pre => Start_Address /= Null_Address and
+                  Size_In_Bits > 0 and
+                  Size_In_Bits mod Byte'Size = 0 and
+                  Permissions /= None;
+
+   procedure Initialize_Private_Code_Region (
+      Region : out MPU_Region_Descriptor_Type;
+      First_Address : System.Address;
+      Last_Address : System.Address)
+      with Pre => First_Address /= Null_Address and
+                  Last_Address /= Null_Address  and
+                  To_Integer (First_Address) < To_Integer (Last_Address);
+
    procedure Restore_Private_Code_Region (
       Saved_Region : MPU_Region_Descriptor_Type);
       --  with Inline;
@@ -250,6 +268,10 @@ package Memory_Protection is
                       To_Integer (Secret_RAM_Text_End'Address)));
       --  with Inline;
 
+   procedure Set_Private_Code_Region (
+      New_Region : MPU_Region_Descriptor_Type;
+      Old_Region : out MPU_Region_Descriptor_Type);
+
    procedure Unset_Private_Code_Region;
 
    procedure Set_Private_Object_Data_Region (
@@ -272,6 +294,10 @@ package Memory_Protection is
                   Size_In_Bits mod Byte'Size = 0 and
                   Permissions /= None;
       --  with Inline;
+
+   procedure Set_Private_Object_Data_Region (
+      New_Region : MPU_Region_Descriptor_Type;
+      Old_Region : out MPU_Region_Descriptor_Type);
 
    procedure Unset_Private_Object_Data_Region;
 
