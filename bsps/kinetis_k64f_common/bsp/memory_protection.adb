@@ -41,19 +41,18 @@ package body Memory_Protection is
    use Kinetis_K64F.MPU;
 
    --
-   --  Flag to enable/disable at compile time the secret data area.
-   --  If the secret data area is disabled, the MPU default background region
-   --  is used as the global background region. If the secret data area is
+   --  Flag to enable/disable at compile time the support for secret areas.
+   --  If secret areas support is disabled, the MPU default background region
+   --  is used as the global background region. The default background region
+   --  covers the entire address space. If secret areas support is
    --  enabled, the MPU default background region is disabled and the global
-   --  background region is represented by two MPU regions:
-   --  Global_Background_Region_Before_Secret_Area and
-   --  Global_Background_Region_After_Secret_Area. The address range after
-   --  the first region and before the second region represents the secret
-   --  area and it is innaccessible by default.
-   --  In both cases the (logical) global background region has read-only
-   --  permissions by default.
+   --  background region is represented by a dedicated MPU region. This region
+   --  covers the entire address space except for the secret data and code
+   --  areas.
+   --  In both cases the global background region has read-only permissions
+   --  by default.
    --
-   Secret_Data_Area_Enabled : constant Boolean := True;
+   Secret_Areas_Enabled : constant Boolean := True;
 
    pragma Compile_Time_Error (
       MPU_Region_Alignment /= Kinetis_K64F.MPU.MPU_Region_Alignment,
@@ -773,7 +772,7 @@ package body Memory_Protection is
          --  regardless of the MPU settings.
          --
 
-         if Secret_Data_Area_Enabled then
+         if Secret_Areas_Enabled then
             --
             --  Disable access to the background region for all masters:
             --
@@ -789,7 +788,7 @@ package body Memory_Protection is
             --
 
             --
-            --  Set MPU regions that represent the global background region
+            --  Set MPU region that represents the global background region
             --  to have read-only permissions:
             --
             Define_MPU_Region (
@@ -1191,7 +1190,7 @@ package body Memory_Protection is
 
       Old_Intr_Mask := Disable_Cpu_Interrupts;
 
-      if Secret_Data_Area_Enabled then
+      if Secret_Areas_Enabled then
          WORD2_Value := MPU_Registers.Region_Descriptors (
             Global_Background_Data_Region'Enum_Rep).WORD2;
 

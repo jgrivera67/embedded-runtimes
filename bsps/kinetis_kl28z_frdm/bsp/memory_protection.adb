@@ -38,19 +38,14 @@ package body Memory_Protection is
    use System.Text_IO.Extended;
 
    --
-   --  Flag to enable/disable at compile time the secret data area.
-   --  If the secret data area is disabled, the MPU default background region
-   --  is used as the global background region. If the secret data area is
-   --  enabled, the MPU default background region is disabled and the global
-   --  background region is represented by two MPU regions:
-   --  Global_Background_Region_Before_Secret_Area and
-   --  Global_Background_Region_After_Secret_Area. The address range after
-   --  the first region and before the second region represents the secret
-   --  area and it is inaccessible by default.
-   --  In both cases the (logical) global background region has read-only
-   --  permissions by default.
+   --  Flag to enable/disable at compile time the support for secret areas.
+   --  If secret areas support is disabled, the global background region covers
+   --  the entire address space. If secret areas support is enabled, the global
+   --  background region excludes the secret data and code areas.
+   --  In both cases the global background region has read-only permissions
+   --  by default.
    --
-   Secret_Data_Area_Enabled : constant Boolean := True;
+   Secret_Areas_Enabled : constant Boolean := True;
 
    Debug_MPU_Enabled : constant Boolean := False;
 
@@ -612,10 +607,10 @@ package body Memory_Protection is
          --
 
          --
-         --  Set MPU regions that represent the global background region
+         --  Set MPU region that represents the global background region
          --  to have read-only permissions:
          --
-         if Secret_Data_Area_Enabled then
+         if Secret_Areas_Enabled then
             Define_MPU_Region (
                Global_Background_Data_Region,
                Global_Background_Data_Region_Start'Address,
@@ -1061,7 +1056,7 @@ package body Memory_Protection is
                       Privileged_Read_Write_Unprivileged_Read_Only);
 
       if Enabled then
-         if Secret_Data_Area_Enabled then
+         if Secret_Areas_Enabled then
             Define_MPU_Region (
                Global_Background_Data_Region,
                Global_Background_Data_Region_Start'Address,
@@ -1075,7 +1070,7 @@ package body Memory_Protection is
                Privileged_Read_Write_Unprivileged_Read_Only);
          end if;
       else
-         if Secret_Data_Area_Enabled then
+         if Secret_Areas_Enabled then
             Define_MPU_Region (
                Global_Background_Data_Region,
                Global_Background_Data_Region_Start'Address,
