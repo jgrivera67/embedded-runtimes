@@ -40,6 +40,7 @@ private with Kinetis_K64F.MPU;
 --  @summary Memory Protection Services
 --
 package Memory_Protection is
+   pragma SPARK_Mode (Off);
    pragma Preelaborate;
 
    use System.Storage_Elements;
@@ -339,16 +340,11 @@ package Memory_Protection is
    is ((Size_In_Bits / Byte'Size) mod MPU_Region_Alignment = 0);
 
 private
-   use Kinetis_K64F.MPU;
 
    --
    --  Saved MPU region descriptor
    --
-   type MPU_Region_Descriptor_Type is record
-      WORD0_Value : WORD0_Register_Type;
-      WORD1_Value : WORD1_Register_Type;
-      WORD2_Value : WORD2_Register_Type;
-      WORD3_Value : WORD3_Register_Type;
-   end record with Volatile;
+   type MPU_Region_Descriptor_Type is new
+        Kinetis_K64F.MPU.Region_Descriptor_Type;
 
 end Memory_Protection;

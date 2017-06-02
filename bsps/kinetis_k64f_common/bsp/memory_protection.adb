@@ -38,6 +38,7 @@ with System.Address_To_Access_Conversions;
 package body Memory_Protection is
    use Machine_Code;
    use Kinetis_K64F.SCS;
+   use Kinetis_K64F.MPU;
 
    --
    --  Flag to enable/disable at compile time the secret data area.
@@ -584,13 +585,13 @@ package body Memory_Protection is
 
       Saved_Region : MPU_Region_Descriptor_Type;
       WORD0_As_Integer : Unsigned_32
-         with Address => Saved_Region.WORD0_Value'Address;
+         with Address => Saved_Region.WORD0'Address;
       WORD1_As_Integer : Unsigned_32
-         with Address => Saved_Region.WORD1_Value'Address;
+         with Address => Saved_Region.WORD1'Address;
       WORD2_As_Integer : Unsigned_32
-         with Address => Saved_Region.WORD2_Value'Address;
+         with Address => Saved_Region.WORD2'Address;
       WORD3_As_Integer : Unsigned_32
-         with Address => Saved_Region.WORD3_Value'Address;
+         with Address => Saved_Region.WORD3'Address;
       RGDAAC_Value : RGDAAC_Register_Type;
       RGDAAC_As_Integer : Unsigned_32 with Address => RGDAAC_Value'Address;
    begin
@@ -860,11 +861,11 @@ package body Memory_Protection is
          (if Permissions = Read_Write then Type1_Read_Write_Permissions
                                       else Type1_Read_Only_Permissions);
    begin
-      Region.WORD0_Value :=
+      Region.WORD0 :=
          Unsigned_32 (To_Integer (Rounded_Down_First_Address));
-      Region.WORD1_Value := Unsigned_32 (To_Integer (Rounded_Up_Last_Address));
-      Region.WORD2_Value.Bus_Master_CPU_Core_Perms := Type1_Permissions;
-      Region.WORD3_Value.VLD := 1;
+      Region.WORD1 := Unsigned_32 (To_Integer (Rounded_Up_Last_Address));
+      Region.WORD2.Bus_Master_CPU_Core_Perms := Type1_Permissions;
+      Region.WORD3.VLD := 1;
    end Initialize_Private_Data_Region;
 
    ------------------------------------
@@ -907,11 +908,11 @@ package body Memory_Protection is
                                     Read_Allowed => 1),
           others => <>);
    begin
-      Region.WORD0_Value :=
+      Region.WORD0 :=
          Unsigned_32 (To_Integer (Rounded_Down_First_Address));
-      Region.WORD1_Value := Unsigned_32 (To_Integer (Rounded_Up_Last_Address));
-      Region.WORD2_Value.Bus_Master_CPU_Core_Perms := Type1_Permissions;
-      Region.WORD3_Value.VLD := 1;
+      Region.WORD1 := Unsigned_32 (To_Integer (Rounded_Up_Last_Address));
+      Region.WORD2.Bus_Master_CPU_Core_Perms := Type1_Permissions;
+      Region.WORD3.VLD := 1;
    end Initialize_Private_Code_Region;
 
    --------------------
@@ -958,13 +959,13 @@ package body Memory_Protection is
       Region_Index : constant Region_Index_Type := Region_Id'Enum_Rep;
    begin
       MPU_Registers.Region_Descriptors (Region_Index).WORD0 :=
-         Saved_Region.WORD0_Value;
+         Saved_Region.WORD0;
       MPU_Registers.Region_Descriptors (Region_Index).WORD1 :=
-         Saved_Region.WORD1_Value;
+         Saved_Region.WORD1;
       MPU_Registers.Region_Descriptors (Region_Index).WORD2 :=
-         Saved_Region.WORD2_Value;
+         Saved_Region.WORD2;
       MPU_Registers.Region_Descriptors (Region_Index).WORD3 :=
-         Saved_Region.WORD3_Value;
+         Saved_Region.WORD3;
       Memory_Barrier;
    end Restore_MPU_Region_Descriptor;
 
@@ -1085,13 +1086,13 @@ package body Memory_Protection is
    is
       Region_Index : constant Region_Index_Type := Region_Id'Enum_Rep;
    begin
-      Saved_Region.WORD0_Value :=
+      Saved_Region.WORD0 :=
          MPU_Registers.Region_Descriptors (Region_Index).WORD0;
-      Saved_Region.WORD1_Value :=
+      Saved_Region.WORD1 :=
          MPU_Registers.Region_Descriptors (Region_Index).WORD1;
-      Saved_Region.WORD2_Value :=
+      Saved_Region.WORD2 :=
          MPU_Registers.Region_Descriptors (Region_Index).WORD2;
-      Saved_Region.WORD3_Value :=
+      Saved_Region.WORD3 :=
          MPU_Registers.Region_Descriptors (Region_Index).WORD3;
    end Save_MPU_Region_Descriptor;
 
