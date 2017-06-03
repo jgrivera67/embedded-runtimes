@@ -68,7 +68,7 @@ package Memory_Protection is
       Global_MPU_IO_Region,
       Global_Background_Data_Region,
       Thread_Stack_Data_Region,
-      Private_Object_Data_Region,
+      Private_Data_Region,
       Private_Code_Region,
 
       --
@@ -85,7 +85,7 @@ package Memory_Protection is
                                Global_MPU_IO_Region => 4,
                                Global_Background_Data_Region => 5,
                                Thread_Stack_Data_Region => 6,
-                               Private_Object_Data_Region => 7,
+                               Private_Data_Region => 7,
                                Private_Code_Region => 8,
                                DMA_Region1 => 9,
                                DMA_Region2 => 10,
@@ -110,7 +110,7 @@ package Memory_Protection is
    --
    type Thread_Regions_Type is limited record
       Stack_Region : MPU_Region_Descriptor_Type;
-      Private_Object_Data_Region : MPU_Region_Descriptor_Type;
+      Private_Data_Region : MPU_Region_Descriptor_Type;
       Private_Code_Region : MPU_Region_Descriptor_Type;
       Writable_Background_Region_Enabled : Boolean := False;
    end record with Volatile;
@@ -204,7 +204,7 @@ package Memory_Protection is
       Saved_Region : MPU_Region_Descriptor_Type);
       --  with Inline;
 
-   procedure Restore_Private_Object_Data_Region (
+   procedure Restore_Private_Data_Region (
       Saved_Region : MPU_Region_Descriptor_Type);
       --  with Inline;
 
@@ -275,7 +275,7 @@ package Memory_Protection is
 
    procedure Unset_Private_Code_Region;
 
-   procedure Set_Private_Object_Data_Region (
+   procedure Set_Private_Data_Region (
       Start_Address : System.Address;
       Size_In_Bits : Integer_Address;
       Permissions : Data_Permissions_Type)
@@ -285,7 +285,7 @@ package Memory_Protection is
                   Permissions /= None;
       --  with Inline;
 
-   procedure Set_Private_Object_Data_Region (
+   procedure Set_Private_Data_Region (
       Start_Address : System.Address;
       Size_In_Bits : Integer_Address;
       Permissions : Data_Permissions_Type;
@@ -296,11 +296,11 @@ package Memory_Protection is
                   Permissions /= None;
       --  with Inline;
 
-   procedure Set_Private_Object_Data_Region (
+   procedure Set_Private_Data_Region (
       New_Region : MPU_Region_Descriptor_Type;
       Old_Region : out MPU_Region_Descriptor_Type);
 
-   procedure Unset_Private_Object_Data_Region;
+   procedure UnSet_Private_Data_Region;
 
    type Bus_Master_Type is (Cpu_Core0,
                             Debugger,

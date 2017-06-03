@@ -432,8 +432,8 @@ package body Memory_Protection is
                Put_String ("Global_Interrupt_Stack_Region");
             when Thread_Stack_Data_Region =>
                Put_String ("Thread_Stack_Data_Region");
-            when Private_Object_Data_Region =>
-               Put_String ("Private_Object_Data_Region");
+            when Private_Data_Region =>
+               Put_String ("Private_Data_Region");
             when Private_Code_Region =>
                Put_String ("Private_Code_Region");
          end case;
@@ -835,11 +835,11 @@ package body Memory_Protection is
       Restore_MPU_Region_Descriptor (Private_Code_Region, Saved_Region);
    end Restore_Private_Code_Region;
 
-   ----------------------------------------
-   -- Restore_Private_Object_Data_Region --
-   ----------------------------------------
+   ---------------------------------
+   -- Restore_Private_Data_Region --
+   ---------------------------------
 
-   procedure Restore_Private_Object_Data_Region (
+   procedure Restore_Private_Data_Region (
       Saved_Region : MPU_Region_Descriptor_Type)
    is
    begin
@@ -847,8 +847,8 @@ package body Memory_Protection is
          return;
       end if;
 
-      Restore_MPU_Region_Descriptor (Private_Object_Data_Region, Saved_Region);
-   end Restore_Private_Object_Data_Region;
+      Restore_MPU_Region_Descriptor (Private_Data_Region, Saved_Region);
+   end Restore_Private_Data_Region;
 
    --------------------------------
    -- Restore_Thread_MPU_Regions --
@@ -872,8 +872,8 @@ package body Memory_Protection is
          Saved_Region => Thread_Regions.Stack_Region);
 
       Restore_MPU_Region_Descriptor (
-         Region_Id => Private_Object_Data_Region,
-         Saved_Region => Thread_Regions.Private_Object_Data_Region);
+         Region_Id => Private_Data_Region,
+         Saved_Region => Thread_Regions.Private_Data_Region);
 
       Restore_MPU_Region_Descriptor (
          Region_Id => Private_Code_Region,
@@ -1009,8 +1009,8 @@ package body Memory_Protection is
          Saved_Region => Thread_Regions.Stack_Region);
 
       Save_MPU_Region_Descriptor (
-         Region_Id => Private_Object_Data_Region,
-         Saved_Region => Thread_Regions.Private_Object_Data_Region);
+         Region_Id => Private_Data_Region,
+         Saved_Region => Thread_Regions.Private_Data_Region);
 
       Save_MPU_Region_Descriptor (
          Region_Id => Private_Code_Region,
@@ -1149,11 +1149,11 @@ package body Memory_Protection is
                                      Saved_Region => New_Region);
    end Set_Private_Code_Region;
 
-   ------------------------------------
-   -- Set_Private_Object_Data_Region --
-   ------------------------------------
+   -----------------------------
+   -- Set_Private_Data_Region --
+   -----------------------------
 
-   procedure Set_Private_Object_Data_Region (
+   procedure Set_Private_Data_Region (
       Start_Address : System.Address;
       Size_In_Bits : Integer_Address;
       Permissions : Data_Permissions_Type)
@@ -1168,17 +1168,17 @@ package body Memory_Protection is
          return;
       end if;
 
-      Define_MPU_Region (Private_Object_Data_Region,
+      Define_MPU_Region (Private_Data_Region,
                          Start_Address,
                          Size_In_Bits / Byte'Size,
                          Read_Write_Permissions);
-   end Set_Private_Object_Data_Region;
+   end Set_Private_Data_Region;
 
-   ------------------------------------
-   -- Set_Private_Object_Data_Region --
-   ------------------------------------
+   -----------------------------
+   -- Set_Private_Data_Region --
+   -----------------------------
 
-   procedure Set_Private_Object_Data_Region (
+   procedure Set_Private_Data_Region (
       Start_Address : System.Address;
       Size_In_Bits : Integer_Address;
       Permissions : Data_Permissions_Type;
@@ -1195,31 +1195,31 @@ package body Memory_Protection is
          return;
       end if;
 
-      Save_MPU_Region_Descriptor (Private_Object_Data_Region,
+      Save_MPU_Region_Descriptor (Private_Data_Region,
                                   Old_Region);
 
-      Define_MPU_Region (Private_Object_Data_Region,
+      Define_MPU_Region (Private_Data_Region,
                          Start_Address,
                          Size_In_Bits / Byte'Size,
                          Read_Write_Permissions);
-   end Set_Private_Object_Data_Region;
+   end Set_Private_Data_Region;
 
-   ------------------------------------
-   -- Set_Private_Object_Data_Region --
-   ------------------------------------
+   -----------------------------
+   -- Set_Private_Data_Region --
+   -----------------------------
 
-   procedure Set_Private_Object_Data_Region (
+   procedure Set_Private_Data_Region (
       New_Region : MPU_Region_Descriptor_Type;
       Old_Region : out MPU_Region_Descriptor_Type)
    is
    begin
-      Save_MPU_Region_Descriptor (Region_Id => Private_Object_Data_Region,
+      Save_MPU_Region_Descriptor (Region_Id => Private_Data_Region,
                                   Saved_Region => Old_Region);
 
-      Restore_MPU_Region_Descriptor (Region_Id => Private_Object_Data_Region,
+      Restore_MPU_Region_Descriptor (Region_Id => Private_Data_Region,
                                      Saved_Region => New_Region);
 
-   end Set_Private_Object_Data_Region;
+   end Set_Private_Data_Region;
 
    -------------------------
    -- Undefine_MPU_Region --
@@ -1254,17 +1254,17 @@ package body Memory_Protection is
    end Unset_Private_Code_Region;
 
    --------------------------------------
-   -- Unset_Private_Object_Data_Region --
+   -- UnSet_Private_Data_Region --
    --------------------------------------
 
-   procedure Unset_Private_Object_Data_Region
+   procedure UnSet_Private_Data_Region
    is
    begin
       if not System.BB.Parameters.Use_MPU then
          return;
       end if;
 
-      Undefine_MPU_Region (Region_Id => Private_Object_Data_Region);
-   end Unset_Private_Object_Data_Region;
+      Undefine_MPU_Region (Region_Id => Private_Data_Region);
+   end UnSet_Private_Data_Region;
 
 end Memory_Protection;
