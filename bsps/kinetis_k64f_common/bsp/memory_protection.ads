@@ -344,7 +344,11 @@ private
    --
    --  Saved MPU region descriptor
    --
-   type MPU_Region_Descriptor_Type is new
-        Kinetis_K64F.MPU.Region_Descriptor_Type;
+   type MPU_Region_Descriptor_Type is array (0 .. 3) of Unsigned_32
+     with Size => 4 * Unsigned_32'Size;
+
+   pragma Compile_Time_Error (MPU_Region_Descriptor_Type'Size /=
+                              Kinetis_K64F.MPU.Region_Descriptor_Type'Size,
+                              "MPU_Region_Descriptor_TYpe has the wrong size");
 
 end Memory_Protection;
