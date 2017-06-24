@@ -92,7 +92,7 @@ package body Memory_Protection is
    end record;
 
    --
-   --  Global stat eof the memory protection services
+   --  Global state of the memory protection services
    --
    type Memory_Protection_Type is record
       Initialized : Boolean := False;

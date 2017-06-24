@@ -44,8 +44,57 @@ package Ada.Interrupts.Names is
    --  First_IRQ constant.
 
    Sys_Tick_Interrupt               : constant Interrupt_ID := 1;
+
    DMA0_Interrupt                   : constant Interrupt_ID :=
      Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.DMA0_IRQ) + 2;
+
+   DMA1_Interrupt                   : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.DMA1_IRQ) + 2;
+
+   DMA2_Interrupt                   : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.DMA2_IRQ) + 2;
+
+   DMA3_Interrupt                   : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.DMA3_IRQ) + 2;
+
+   DMA4_Interrupt                   : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.DMA4_IRQ) + 2;
+
+   DMA5_Interrupt                   : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.DMA5_IRQ) + 2;
+
+   DMA6_Interrupt                   : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.DMA6_IRQ) + 2;
+
+   DMA7_Interrupt                   : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.DMA7_IRQ) + 2;
+
+   DMA8_Interrupt                   : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.DMA8_IRQ) + 2;
+
+   DMA9_Interrupt                   : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.DMA9_IRQ) + 2;
+
+   DMA10_Interrupt                  : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.DMA10_IRQ) + 2;
+
+   DMA11_Interrupt                  : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.DMA11_IRQ) + 2;
+
+   DMA12_Interrupt                  : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.DMA12_IRQ) + 2;
+
+   DMA13_Interrupt                  : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.DMA13_IRQ) + 2;
+
+   DMA14_Interrupt                  : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.DMA14_IRQ) + 2;
+
+   DMA15_Interrupt                  : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.DMA15_IRQ) + 2;
+
+   DMA_Error_Interrupt              : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.DMA_Error_IRQ) + 2;
 
    UART0_Interrupt                   : constant Interrupt_ID :=
      Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.UART0_RX_TX_IRQ) +
