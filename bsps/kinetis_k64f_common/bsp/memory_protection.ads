@@ -304,22 +304,38 @@ package Memory_Protection is
 
    type Bus_Master_Type is (Cpu_Core0,
                             Debugger,
-                            Dma_Device_DMA_Engine,
-                            Dma_Device_ENET,
-                            Dma_Device_USB,
-                            Dma_Device_SDHC,
-                            Dma_Device_Master6,
-                            Dma_Device_Master7);
+                            DMA_Device_DMA_Engine,
+                            DMA_Device_ENET,
+                            DMA_Device_USB,
+                            DMA_Device_SDHC,
+                            DMA_Device_Master6,
+                            DMA_Device_Master7);
+
+   for Bus_Master_Type use (Cpu_Core0 => 0,
+                            Debugger => 1,
+                            DMA_Device_DMA_Engine => 2,
+                            DMA_Device_ENET => 3,
+                            DMA_Device_USB => 4,
+                            DMA_Device_SDHC => 5,
+                            DMA_Device_Master6 => 6,
+                            DMA_Device_Master7 => 7);
+
+    --
+    --  Allocation of MPU regions to DMA-capable devices:
+    --
+   DMA_Region_ENET : constant MPU_Region_Id_Type := DMA_Region1;
+   DMA_Region_DMA_Engine : constant MPU_Region_Id_Type := DMA_Region2;
 
    procedure Set_DMA_Region (Region_Id : MPU_Region_Id_Type;
                              DMA_Master : Bus_Master_Type;
                              Start_Address : System.Address;
                              Size_In_Bits : Integer_Address;
                              Permissions : Data_Permissions_Type)
-      with Pre => DMA_Master in Dma_Device_DMA_Engine .. Dma_Device_Master7 and
+      with Pre => DMA_Master in DMA_Device_DMA_Engine .. DMA_Device_Master7 and
                   Region_Id >= DMA_Region1 and
                   Start_Address /= Null_Address and
-                  Size_In_Bits > 0 and Size_In_Bits mod Byte'Size = 0 and
+                  --  Size_In_Bits = 0 means the largest possible region
+                  Size_In_Bits mod Byte'Size = 0 and
                   Permissions /= None;
 
    procedure Unset_DMA_Region (Region_Id : MPU_Region_Id_Type)

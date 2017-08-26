@@ -275,17 +275,17 @@ package body Memory_Protection is
       case Bus_Master is
          when Cpu_Core0 =>
             WORD2_Value.Bus_Master_CPU_Core_Perms := Type1_Permissions;
-         when Dma_Device_DMA_Engine =>
+         when DMA_Device_DMA_Engine =>
             WORD2_Value.Bus_Master_DMA_EZport_Perms := Type1_Permissions;
-         when Dma_Device_ENET =>
+         when DMA_Device_ENET =>
             WORD2_Value.Bus_Master_ENET_Perms := Type1_Permissions;
-         when Dma_Device_USB =>
+         when DMA_Device_USB =>
             WORD2_Value.Bus_Master_USB_Perms := Type2_Permissions;
-         when Dma_Device_SDHC =>
+         when DMA_Device_SDHC =>
             WORD2_Value.Bus_Master_SDHC_Perms := Type2_Permissions;
-         when Dma_Device_Master6 =>
+         when DMA_Device_Master6 =>
             WORD2_Value.Bus_Master6_Perms := Type2_Permissions;
-         when Dma_Device_Master7 =>
+         when DMA_Device_Master7 =>
             WORD2_Value.Bus_Master7_Perms := Type2_Permissions;
          when others =>
             pragma Assert (False);
@@ -1258,8 +1258,11 @@ package body Memory_Protection is
 
       Size_In_Bytes : constant Integer_Address := Size_In_Bits / Byte'Size;
       Last_Address : constant Address :=
-         To_Address (Round_Up (To_Integer (Start_Address) + Size_In_Bytes,
-                               MPU_Region_Alignment) - 1);
+         To_Address (if Size_In_Bytes = 0 then
+                        Integer_Address'Last
+                     else
+                        Round_Up (To_Integer (Start_Address) + Size_In_Bytes,
+                                  MPU_Region_Alignment) - 1);
 
       Type1_Read_Write_Permissions : constant Bus_Master_Permissions_Type1 :=
          (User_Mode_Permissions => (Execute_Allowed => 0,
@@ -1287,14 +1290,14 @@ package body Memory_Protection is
       end if;
 
       if Permissions = Read_Only then
-         if DMA_Master <= Dma_Device_ENET then
+         if DMA_Master <= DMA_Device_ENET then
             Type1_Permissions := Type1_Read_Only_Permissions;
          else
             Type2_Permissions := Type2_Read_Only_Permissions;
          end if;
       else
          pragma Assert (Permissions = Read_Write);
-         if DMA_Master <= Dma_Device_ENET then
+         if DMA_Master <= DMA_Device_ENET then
             Type1_Permissions := Type1_Read_Write_Permissions;
          else
             Type2_Permissions := Type2_Read_Write_Permissions;

@@ -96,6 +96,36 @@ package Ada.Interrupts.Names is
    DMA_Error_Interrupt              : constant Interrupt_ID :=
      Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.DMA_Error_IRQ) + 2;
 
+   PORTA_Interrupt                   : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.PORTA_IRQ) +
+     2;
+
+   PORTB_Interrupt                   : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.PORTB_IRQ) +
+     2;
+
+   PORTC_Interrupt                   : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.PORTC_IRQ) +
+     2;
+   PORTD_Interrupt                   : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.PORTD_IRQ) +
+     2;
+   PORTE_Interrupt                   : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.PORTE_IRQ) +
+     2;
+
+   I2C0_Interrupt                   : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.I2C0_IRQ) +
+     2;
+
+   I2C1_Interrupt                   : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.I2C1_IRQ) +
+     2;
+
+   I2C2_Interrupt                   : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.I2C2_IRQ) +
+     2;
+
    UART0_Interrupt                   : constant Interrupt_ID :=
      Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.UART0_RX_TX_IRQ) +
      2;
@@ -118,6 +148,18 @@ package Ada.Interrupts.Names is
 
    UART5_Interrupt                   : constant Interrupt_ID :=
      Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.UART5_RX_TX_IRQ) +
+     2;
+
+   LLWU_Interrupt                   : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.LLWU_IRQ) +
+     2;
+
+   RTC_Interrupt                   : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.RTC_IRQ) +
+     2;
+
+   RTC_Seconds_Interrupt                   : constant Interrupt_ID :=
+     Kinetis_K64F.External_Interrupt_Type'Pos (Kinetis_K64F.RTC_Seconds_IRQ) +
      2;
 
    --  ...
