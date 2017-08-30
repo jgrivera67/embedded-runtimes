@@ -63,6 +63,7 @@ package body System.Text_IO is
       Calculated_SBR : Positive range 1 .. 16#1FFF#;
       Encoded_Baud_Rate : UART.Encoded_Baud_Rate_Type with
         Address => Calculated_SBR'Address;
+      SCGC5_Value : SIM.SCGC5_Type;
    begin
       --  Enable UART clock
       SIM.Registers.SCGC4.UART0 := 1;
@@ -87,6 +88,11 @@ package body System.Text_IO is
       UART.Uart0_Registers.PFIFO := (RXFE => 1, TXFE => 1, others => 0);
 
       UART.Uart0_Registers.CFIFO := (RXFLUSH => 1, TXFLUSH => 1, others => 0);
+
+      --  Enable the GPIO port clock for the Tx and Rx pins:
+      SCGC5_Value := SIM.Registers.SCGC5;
+      SCGC5_Value.PORTB := 1;
+      SIM.Registers.SCGC5 := SCGC5_Value;
 
       --  Configure Tx pin:
       PORT.PortB_Registers.PCR (17) := (MUX => 3, DSE => 1, IRQC => 0,

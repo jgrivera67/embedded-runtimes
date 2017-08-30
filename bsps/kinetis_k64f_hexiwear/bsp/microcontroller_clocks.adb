@@ -49,6 +49,7 @@ package body Microcontroller_Clocks is
          REGSC_Value : PMC.REGSC_Type;
          SOPT2_Value : SIM.SOPT2_Type;
          SOPT1_Value : SIM.SOPT1_Type;
+         SCGC5_Value : SIM.SCGC5_Type;
          PCR_Value : PORT.PCR_Type;
          C7_Value : MCG.C7_Type;
          C4_Value : MCG.C4_Type;
@@ -72,6 +73,11 @@ package body Microcontroller_Clocks is
          SOPT1_Value := SIM.Registers.SOPT1;
          SOPT1_Value.OSC32KSEL := 3;
          SIM.Registers.SOPT1 := SOPT1_Value;
+
+         --  Enable GPIO port A clock (Pin PTA18 is used as EXTAL0):
+         SCGC5_Value := SIM.Registers.SCGC5;
+         SCGC5_Value.PORTA := 1;
+         SIM.Registers.SCGC5 := SCGC5_Value;
 
          PCR_Value := PORT.PortA_Registers.PCR (18);
          PCR_Value.ISF := 0;
@@ -144,13 +150,13 @@ package body Microcontroller_Clocks is
 
    begin -- Initialize
 
-      --  Enable all of the GPIO port clocks:
+      --  Disable all of the GPIO port clocks:
       SCGC5_Value := SIM.Registers.SCGC5;
-      SCGC5_Value.PORTA := 1;
-      SCGC5_Value.PORTB := 1;
-      SCGC5_Value.PORTC := 1;
-      SCGC5_Value.PORTD := 1;
-      SCGC5_Value.PORTE := 1;
+      SCGC5_Value.PORTA := 0;
+      SCGC5_Value.PORTB := 0;
+      SCGC5_Value.PORTC := 0;
+      SCGC5_Value.PORTD := 0;
+      SCGC5_Value.PORTE := 0;
       SIM.Registers.SCGC5 := SCGC5_Value;
 
       --  Set the system dividers:
