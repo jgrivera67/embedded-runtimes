@@ -130,7 +130,8 @@ package body Memory_Protection is
       First_Address : System.Address;
       Last_Address : System.Address;
       Read_Write_Permissions : Read_Write_Permissions_Type;
-      Execute_Permission : Boolean := False);
+      Execute_Permission : Boolean := False)
+      with Pre => First_Address <= Last_Address;
    --
    --  Configure an MPU region to cover a given range of addresses and with
    --  the given access permissions. It may need to round-down the first
@@ -228,32 +229,36 @@ package body Memory_Protection is
          To_Integer (Rounded_Down_First_Address) + 1;
       Subregion_Size : constant Integer_Address :=
          Rounded_Region_Size / Disabled_Subregions_Mask'Length;
-      Subregion_Index : Subregion_Index_Type;
+      Subregion_Index1 : Subregion_Index_Type;
+      Subregion_Index2 : Subregion_Index_Type;
       Subregion_Address : Address;
    begin
+      Disabled_Subregions_Mask := (others => 0);
       if Subregion_Size < MPU_Region_Alignment then
-         Disabled_Subregions_Mask := (others => 0);
-      else
-         Subregion_Index := Disabled_Subregions_Mask'First;
-         Subregion_Address := Rounded_Down_First_Address;
-         loop
-            exit when Subregion_Address >= First_Address;
-            Disabled_Subregions_Mask (Subregion_Index) := 1;
-            Subregion_Index := Subregion_Index + 1;
-            Subregion_Address := To_Address (To_Integer (Subregion_Address) +
-                                             Subregion_Size);
-         end loop;
-
-         pragma Assert (Subregion_Index < Disabled_Subregions_Mask'Last);
-         Subregion_Address := Rounded_Up_Last_Address;
-         loop
-            exit when Subregion_Address <= Last_Address;
-            Disabled_Subregions_Mask (Subregion_Index) := 1;
-            Subregion_Index := Subregion_Index + 1;
-            Subregion_Address := To_Address (To_Integer (Subregion_Address) -
-                                             Subregion_Size);
-         end loop;
+         return;
       end if;
+
+      Subregion_Index1 := Disabled_Subregions_Mask'First;
+      Subregion_Address := Rounded_Down_First_Address;
+      while Subregion_Address < First_Address loop
+         Disabled_Subregions_Mask (Subregion_Index1) := 1;
+         Subregion_Index1 := Subregion_Index1 + 1;
+         Subregion_Address := To_Address (To_Integer (Subregion_Address) +
+                                          Subregion_Size);
+      end loop;
+
+      pragma Assert (Subregion_Index1 <= Disabled_Subregions_Mask'Last);
+      Subregion_Address := Rounded_Up_Last_Address;
+      Subregion_Index2 := Disabled_Subregions_Mask'Last;
+      while Subregion_Address > Last_Address loop
+         pragma Assert (Subregion_Index2 > Subregion_Index1);
+         Disabled_Subregions_Mask (Subregion_Index2) := 1;
+         Subregion_Index2 := Subregion_Index2 - 1;
+         Subregion_Address := To_Address (To_Integer (Subregion_Address) -
+                                          Subregion_Size);
+      end loop;
+
+      pragma Assert (Subregion_Index1 <= Subregion_Index2);
    end Build_Disabled_Subregions_Mask;
 
    -----------------------
@@ -814,7 +819,6 @@ package body Memory_Protection is
    begin
       RNR_Value.REGION := Region_Id'Enum_Rep;
       MPU_Registers.MPU_RNR := RNR_Value;
-      Memory_Barrier;
       MPU_Registers.MPU_RBAR := Saved_Region.RBAR_Value;
       MPU_Registers.MPU_RASR := Saved_Region.RASR_Value;
       Memory_Barrier;
@@ -967,7 +971,6 @@ package body Memory_Protection is
    begin
       RNR_Value := (REGION => Region_Id'Enum_Rep, others => <>);
       MPU_Registers.MPU_RNR := RNR_Value;
-      Memory_Barrier;
       Saved_Region.RBAR_Value := MPU_Registers.MPU_RBAR;
       Saved_Region.RASR_Value := MPU_Registers.MPU_RASR;
    end Save_MPU_Region_Descriptor;
@@ -1041,6 +1044,7 @@ package body Memory_Protection is
    procedure Set_CPU_Writable_Background_Region (Enabled : Boolean;
                                                  Old_Enabled : out Boolean)
    is
+      RNR_Value : MPU_RNR_Register_Type;
       RASR_Value : MPU_RASR_Register_Type;
       Old_Intr_Mask : Word;
    begin
@@ -1050,6 +1054,8 @@ package body Memory_Protection is
       end if;
 
       Old_Intr_Mask := Disable_Cpu_Interrupts;
+      RNR_Value.REGION := Global_Background_Data_Region'Enum_Rep;
+      MPU_Registers.MPU_RNR := RNR_Value;
 
       RASR_Value := MPU_Registers.MPU_RASR;
       Old_Enabled := (RASR_Value.ATTRS.AP =
