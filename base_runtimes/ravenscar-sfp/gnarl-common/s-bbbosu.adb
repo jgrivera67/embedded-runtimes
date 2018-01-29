@@ -113,7 +113,7 @@ package body System.BB.Board_Support is
 
    function To_PRI (P : Integer) return PRI is
      (if P not in Interrupt_Priority then 0
-      else PRI (Interrupt_Priority'Last - P + 1) * 16);
+      else PRI (Interrupt_Priority'Last - P + 1) * 16); -- shift 4 bits left
    --  Return the BASEPRI mask for the given Ada priority. Note that the zero
    --  value here means no mask, so no interrupts are masked.
 
@@ -408,7 +408,8 @@ package body System.BB.Board_Support is
    procedure Set_Current_Priority (Priority : Integer) is
    begin
       --  Writing a 0 to BASEPRI disables interrupt masking, while values
-      --  15 .. 1 correspond to interrupt priorities 255 .. 241 in that order.
+      --  15 (low) .. 1 (high) correspond to interrupt priorities 241 .. 255
+      --  in that order.
 
       Asm ("msr BASEPRI, %0",
            Inputs => PRI'Asm_Input ("r", To_PRI (Priority)),

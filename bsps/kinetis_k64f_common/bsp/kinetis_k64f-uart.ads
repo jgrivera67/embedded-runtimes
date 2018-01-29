@@ -166,6 +166,22 @@ package Kinetis_K64F.UART is
          TXFLUSH at 0 range 7 .. 7;
       end record;
 
+   --   MODEM - MODEM Control Register
+   type MODEM_Type is record
+      TXCTSE : Bit;
+      TXRTSE : Bit;
+      TXRTSPOL : Bit;
+      RXRTSE : Bit;
+   end record with Size => Byte'Size, Bit_Order => Low_Order_First;
+
+   for MODEM_Type use
+      record
+         TXCTSE at 0 range 0 .. 0;
+         TXRTSE at 0 range 1 .. 1;
+         TXRTSPOL at 0 range 2 .. 2;
+         RXRTSE at 0 range 3 .. 3;
+      end record;
+
    type Registers_Type is record
       BDH :  BDH_Type;
       BDL :  Byte;
@@ -180,7 +196,7 @@ package Kinetis_K64F.UART is
       C4 :  Byte;
       C5 :  Byte;
       ED :  Byte;
-      MODEM :  Byte;
+      MODEM :  MODEM_Type;
       IR :  Byte;
       Reserved_0 :  Byte;
       PFIFO :  PFIFO_Type;

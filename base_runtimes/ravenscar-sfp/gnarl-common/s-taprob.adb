@@ -31,6 +31,7 @@ with System.Task_Primitives.Operations;
 --           Get_Priority
 --           Self
 with Memory_Protection;
+--  with System.BB.Board_Support;
 
 package body System.Tasking.Protected_Objects is
 
@@ -99,6 +100,11 @@ package body System.Tasking.Protected_Objects is
       Set_CPU_Writable_Background_Region (True, Old_Enabled);
       Set_Priority (Self_Id, Object.Ceiling);
 
+      --  Bug fix by jgrivera67@gmail.com
+      --  if Object.Ceiling in Interrupt_Priority then
+      --     System.BB.Board_Support.Set_Current_Priority (Object.Ceiling);
+      --  end if;
+
       --  Locking for multiprocessor systems
 
       --  This lock ensure mutual exclusion of tasks from different processors,
@@ -166,6 +172,11 @@ package body System.Tasking.Protected_Objects is
 
          Multiprocessors.Fair_Locks.Unlock (Object.Lock);
       end if;
+
+      --  Bug fix by jgrivera67@gmail.com
+      --  if Object.Ceiling in Interrupt_Priority then
+      --     System.BB.Board_Support.Set_Current_Priority (Caller_Priority);
+      --  end if;
 
       Set_Priority (Self_Id, Caller_Priority);
       Set_CPU_Writable_Background_Region (Old_Enabled);
