@@ -6,7 +6,7 @@
 --                                                                          --
 --                                  B o d y                                 --
 --                                                                          --
---                     Copyright (C) 2001-2016, AdaCore                     --
+--                     Copyright (C) 2001-2018, AdaCore                     --
 --                                                                          --
 -- GNARL is free software; you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -15,8 +15,13 @@
 -- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
 -- or FITNESS FOR A PARTICULAR PURPOSE.                                     --
 --                                                                          --
--- You should have received a copy of the GNU General Public License along  --
--- with this library; see the file COPYING3. If not, see:                   --
+--                                                                          --
+--                                                                          --
+--                                                                          --
+--                                                                          --
+-- You should have received a copy of the GNU General Public License and    --
+-- a copy of the GCC Runtime Library Exception along with this program;     --
+-- see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see    --
 -- <http://www.gnu.org/licenses/>.                                          --
 --                                                                          --
 ------------------------------------------------------------------------------
@@ -33,7 +38,6 @@ with Ada.Unchecked_Conversion;
 with System.Storage_Elements;
 with System.Tasking.Debug;
 with System.Task_Info;
-with Memory_Protection;
 
 package body System.Task_Primitives.Operations is
 
@@ -41,7 +45,6 @@ package body System.Task_Primitives.Operations is
    use System.Parameters;
    use System.Storage_Elements;
    use System.Multiprocessors;
-   use Memory_Protection;
 
    use type System.Tasking.Task_Id;
 
@@ -121,13 +124,10 @@ package body System.Task_Primitives.Operations is
 
    procedure Delay_Until (Abs_Time : Time) is
       Self_ID : constant ST.Task_Id := Self;
-      Old_Enabled : Boolean;
    begin
-      Set_CPU_Writable_Background_Region (True, Old_Enabled);
       Self_ID.Common.State := ST.Delay_Sleep;
       System.OS_Interface.Delay_Until (System.OS_Interface.Time (Abs_Time));
       Self_ID.Common.State := ST.Runnable;
-      Set_CPU_Writable_Background_Region (Old_Enabled);
    end Delay_Until;
 
    ---------------------
@@ -210,10 +210,7 @@ package body System.Task_Primitives.Operations is
    ----------------
 
    procedure Enter_Task (Self_ID : ST.Task_Id) is
-      Old_Enabled : Boolean;
    begin
-      Set_CPU_Writable_Background_Region (True, Old_Enabled);
-
       --  Set lwp (for gdb)
 
       Self_ID.Common.LL.Lwp := Lwp_Self;
@@ -222,10 +219,9 @@ package body System.Task_Primitives.Operations is
 
       System.Tasking.Debug.Add_Task_Id (Self_ID);
 
-      Set_CPU_Writable_Background_Region (Old_Enabled);
-
       --  Ensure that the task has the right priority priority at the end
-      --  of its initialization (before calling the task's code).
+      --  of its initialization (before calling the task's code). This will
+      --  reschedule if needed.
 
       System.OS_Interface.Set_Priority (Self_ID.Common.Base_Priority);
    end Enter_Task;
@@ -408,7 +404,6 @@ package body System.Task_Primitives.Operations is
          Task_Info.Unspecified_Task_Info,
          Idle_Stacks (CPU_Id)'Address,
          Parameters.Size_Type (Idle_Stack_Size),
-         Parameters.Unspecified_Size,
          Idle_Task'Access, Success);
 
       Idle_Task.Common.LL.Thread := Idle_Task.Common.LL.Thread_Desc'Access;

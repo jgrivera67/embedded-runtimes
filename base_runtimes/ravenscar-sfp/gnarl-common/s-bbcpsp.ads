@@ -1,12 +1,12 @@
 ------------------------------------------------------------------------------
 --                                                                          --
---                         GNAT RUN-TIME COMPONENTS                         --
+--                  GNAT RUN-TIME LIBRARY (GNARL) COMPONENTS                --
 --                                                                          --
---                   S Y S T E M .  M A C H I N E _ R E S E T               --
+--               S Y S T E M . B B . C P U _ S P E C I F I C                --
 --                                                                          --
---                                 B o d y                                  --
+--                                  S p e c                                 --
 --                                                                          --
---            Copyright (C) 2011-2016, Free Software Foundation, Inc.       --
+--                    Copyright (C) 2016-2017, AdaCore                      --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -15,8 +15,13 @@
 -- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
 -- or FITNESS FOR A PARTICULAR PURPOSE.                                     --
 --                                                                          --
--- You should have received a copy of the GNU General Public License along  --
--- with this library; see the file COPYING3. If not, see:                   --
+--                                                                          --
+--                                                                          --
+--                                                                          --
+--                                                                          --
+-- You should have received a copy of the GNU General Public License and    --
+-- a copy of the GCC Runtime Library Exception along with this program;     --
+-- see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see    --
 -- <http://www.gnu.org/licenses/>.                                          --
 --                                                                          --
 -- GNAT was originally developed  by the GNAT team at  New York University. --
@@ -24,55 +29,15 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Interfaces;
+--  This package contains the primitives which are dependent on the
+--  underlying processor.
 
-package body System.Machine_Reset is
-   procedure Os_Exit (Status : Integer);
-   pragma No_Return (Os_Exit);
-   pragma Export (Ada, Os_Exit, "_exit");
-   --  Shutdown or restart the board
+pragma Restrictions (No_Elaboration_Code);
 
-   procedure Os_Abort;
-   pragma No_Return (Os_Abort);
-   pragma Export (Ada, Os_Abort, "abort");
-   --  Likewise
+package System.BB.CPU_Specific is
+   pragma Preelaborate;
 
-   --------------
-   -- Os_Abort --
-   --------------
+   Stack_Alignment : constant := 8;
+   --  Stack alignment defined by the ABI
 
-   procedure Os_Abort is
-   begin
-      Os_Exit (1);
-   end Os_Abort;
-
-   -------------
-   -- Os_Exit --
-   -------------
-
-   procedure Os_Exit (Status : Integer) is
-      pragma Unreferenced (Status);
-      --  The parameter is just for ISO-C compatibility
-
-      AIRCR : Interfaces.Unsigned_32;
-      for AIRCR'Address use 16#E000_ED0C#;
-      pragma Import (Ada, AIRCR);
-      pragma Volatile (AIRCR);
-
-   begin
-      AIRCR := 16#05FA_0004#;
-
-      loop
-         null;
-      end loop;
-   end Os_Exit;
-
-   ----------
-   -- Stop --
-   ----------
-
-   procedure Stop is
-   begin
-      Os_Exit (0);
-   end Stop;
-end System.Machine_Reset;
+end System.BB.CPU_Specific;

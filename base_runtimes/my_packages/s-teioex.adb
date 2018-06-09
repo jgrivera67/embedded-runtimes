@@ -24,8 +24,6 @@
 --  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 --  POSSIBILITY OF SUCH DAMAGE.
 
-with Memory_Protection;
-
 package body System.Text_IO.Extended is
    use Interfaces;
 

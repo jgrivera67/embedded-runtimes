@@ -6,7 +6,7 @@
 --                                                                          --
 --                                  B o d y                                 --
 --                                                                          --
---                     Copyright (C) 2001-2016, AdaCore                     --
+--                     Copyright (C) 2001-2018, AdaCore                     --
 --                                                                          --
 -- GNARL is free software; you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -15,8 +15,13 @@
 -- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
 -- or FITNESS FOR A PARTICULAR PURPOSE.                                     --
 --                                                                          --
--- You should have received a copy of the GNU General Public License along  --
--- with this library; see the file COPYING3. If not, see:                   --
+--                                                                          --
+--                                                                          --
+--                                                                          --
+--                                                                          --
+-- You should have received a copy of the GNU General Public License and    --
+-- a copy of the GCC Runtime Library Exception along with this program;     --
+-- see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see    --
 -- <http://www.gnu.org/licenses/>.                                          --
 --                                                                          --
 -- GNARL was developed by the GNARL team at Florida State University.       --
@@ -36,16 +41,11 @@ pragma Polling (Off);
 --  operations. It causes infinite loops and other problems.
 
 with System.Task_Primitives.Operations;
---  used for Self
-
-with System.Secondary_Stack;
---  used for SS_Init
---           Default_Secondary_Stack_Size
 
 package body System.Tasking is
 
-   use System.Secondary_Stack;
    use System.Multiprocessors;
+   use System.Secondary_Stack;
 
    ------------------------
    -- Local Declarations --
@@ -71,9 +71,9 @@ package body System.Tasking is
    -- Get_Sec_Stack --
    -------------------
 
-   function Get_Sec_Stack return Address is
+   function Get_Sec_Stack return SS_Stack_Ptr is
    begin
-      return Self.Common.Compiler_Data.Sec_Stack_Addr;
+      return Self.Common.Compiler_Data.Sec_Stack_Ptr;
    end Get_Sec_Stack;
 
    ---------------------
@@ -88,7 +88,6 @@ package body System.Tasking is
       Task_Info            : System.Task_Info.Task_Info_Type;
       Stack_Address        : System.Address;
       Stack_Size           : System.Parameters.Size_Type;
-      Secondary_Stack_Size : System.Parameters.Size_Type;
       T                    : Task_Id;
       Success              : out Boolean)
    is
@@ -109,7 +108,6 @@ package body System.Tasking is
       T.Common.Task_Arg                 := Task_Arg;
       T.Common.Task_Entry_Point         := Task_Entry_Point;
       T.Common.Task_Info                := Task_Info;
-      T.Common.Secondary_Stack_Size     := Secondary_Stack_Size;
 
       T.Common.Compiler_Data.Pri_Stack_Info.Start_Address :=
         Stack_Address;
@@ -122,13 +120,6 @@ package body System.Tasking is
    ----------------
    -- Initialize --
    ----------------
-
-   Secondary_Stack : aliased Storage_Elements.Storage_Array
-                       (1 .. Storage_Elements.Storage_Offset
-                               (Default_Secondary_Stack_Size));
-   for Secondary_Stack'Alignment use Standard'Maximum_Alignment;
-   pragma Warnings (Off, Secondary_Stack);
-   --  Secondary stack of the environmental task
 
    Initialized : Boolean := False;
    --  Used to prevent multiple calls to Initialize
@@ -156,7 +147,7 @@ package body System.Tasking is
 
       Initialize_ATCB
         (null, Null_Address, Base_Priority, CPU'First,
-         Task_Info.Unspecified_Task_Info, Null_Address, 0, 0,
+         Task_Info.Unspecified_Task_Info, Null_Address, 0,
          Environment_Task'Access, Success);
 
       Task_Primitives.Operations.Initialize
@@ -168,11 +159,12 @@ package body System.Tasking is
       Environment_Task.Common.State := Runnable;
       Environment_Task.Entry_Call.Self := Environment_Task'Access;
 
-      --  Initialize the secondary stack
+      --  Set the environment secondary stack pointer to null to allow SS_Init
+      --  to assign a stack from the default-sized secondary stack pool.
 
-      Environment_Task.Common.Compiler_Data.Sec_Stack_Addr :=
-        Secondary_Stack'Address;
-      SS_Init (Secondary_Stack'Address, Default_Secondary_Stack_Size);
+      Environment_Task.Common.Compiler_Data.Sec_Stack_Ptr := null;
+      SS_Init
+        (Environment_Task.Common.Compiler_Data.Sec_Stack_Ptr);
 
       --  No fall back handler by default
 
@@ -202,15 +194,6 @@ package body System.Tasking is
    ----------
 
    function Self return Task_Id renames System.Task_Primitives.Operations.Self;
-
-   -------------------
-   -- Set_Sec_Stack --
-   -------------------
-
-   procedure Set_Sec_Stack (Stk : Address) is
-   begin
-      Self.Common.Compiler_Data.Sec_Stack_Addr := Stk;
-   end Set_Sec_Stack;
 
    ------------------
    -- Storage_Size --

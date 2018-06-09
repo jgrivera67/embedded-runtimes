@@ -2,11 +2,11 @@
 --                                                                          --
 --                         GNAT RUN-TIME COMPONENTS                         --
 --                                                                          --
---                   S Y S T E M .  M A C H I N E _ R E S E T               --
+--                    S Y S T E M . S E M I H O S T I N G                   --
 --                                                                          --
---                                 B o d y                                  --
+--                                 S p e c                                  --
 --                                                                          --
---            Copyright (C) 2011-2016, Free Software Foundation, Inc.       --
+--            Copyright (C) 2017-2018, Free Software Foundation, Inc.       --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -15,8 +15,13 @@
 -- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
 -- or FITNESS FOR A PARTICULAR PURPOSE.                                     --
 --                                                                          --
--- You should have received a copy of the GNU General Public License along  --
--- with this library; see the file COPYING3. If not, see:                   --
+--                                                                          --
+--                                                                          --
+--                                                                          --
+--                                                                          --
+-- You should have received a copy of the GNU General Public License and    --
+-- a copy of the GCC Runtime Library Exception along with this program;     --
+-- see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see    --
 -- <http://www.gnu.org/licenses/>.                                          --
 --                                                                          --
 -- GNAT was originally developed  by the GNAT team at  New York University. --
@@ -24,55 +29,22 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Interfaces;
+--  Semihosting is a mechanism that enables I/O between target and host
+--  computer using the debugger. Although based on ARM definition of
+--  semihosting, the features described here can be implemented on virtually
+--  any platform.
 
-package body System.Machine_Reset is
-   procedure Os_Exit (Status : Integer);
-   pragma No_Return (Os_Exit);
-   pragma Export (Ada, Os_Exit, "_exit");
-   --  Shutdown or restart the board
+package System.Semihosting is
+   pragma No_Elaboration_Code_All;
+   pragma Preelaborate;
 
-   procedure Os_Abort;
-   pragma No_Return (Os_Abort);
-   pragma Export (Ada, Os_Abort, "abort");
-   --  Likewise
+   procedure Put (Item : Character);
+   --  Put a character on the console
 
-   --------------
-   -- Os_Abort --
-   --------------
+   procedure Put (Item : String);
+   --  Put a string on the console
 
-   procedure Os_Abort is
-   begin
-      Os_Exit (1);
-   end Os_Abort;
+   procedure Get (Item : out Character);
+   --  Get one character from the console
 
-   -------------
-   -- Os_Exit --
-   -------------
-
-   procedure Os_Exit (Status : Integer) is
-      pragma Unreferenced (Status);
-      --  The parameter is just for ISO-C compatibility
-
-      AIRCR : Interfaces.Unsigned_32;
-      for AIRCR'Address use 16#E000_ED0C#;
-      pragma Import (Ada, AIRCR);
-      pragma Volatile (AIRCR);
-
-   begin
-      AIRCR := 16#05FA_0004#;
-
-      loop
-         null;
-      end loop;
-   end Os_Exit;
-
-   ----------
-   -- Stop --
-   ----------
-
-   procedure Stop is
-   begin
-      Os_Exit (0);
-   end Stop;
-end System.Machine_Reset;
+end System.Semihosting;

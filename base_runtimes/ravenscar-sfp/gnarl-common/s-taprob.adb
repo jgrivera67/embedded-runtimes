@@ -6,7 +6,7 @@
 --                                                                          --
 --                                  B o d y                                 --
 --                                                                          --
---          Copyright (C) 1992-2015, Free Software Foundation, Inc.         --
+--          Copyright (C) 1992-2018, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNARL is free software; you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -15,8 +15,13 @@
 -- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
 -- or FITNESS FOR A PARTICULAR PURPOSE.                                     --
 --                                                                          --
--- You should have received a copy of the GNU General Public License along  --
--- with this library; see the file COPYING3. If not, see:                   --
+--                                                                          --
+--                                                                          --
+--                                                                          --
+--                                                                          --
+-- You should have received a copy of the GNU General Public License and    --
+-- a copy of the GCC Runtime Library Exception along with this program;     --
+-- see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see    --
 -- <http://www.gnu.org/licenses/>.                                          --
 --                                                                          --
 -- GNARL was developed by the GNARL team at Florida State University.       --
@@ -30,14 +35,11 @@ with System.Task_Primitives.Operations;
 --  Used for Set_Priority
 --           Get_Priority
 --           Self
-with Memory_Protection;
---  with System.BB.Board_Support;
 
 package body System.Tasking.Protected_Objects is
 
    use System.Task_Primitives.Operations;
    use System.Multiprocessors;
-   use Memory_Protection;
 
    Multiprocessor : constant Boolean := CPU'Range_Length /= 1;
    --  Set true if on multiprocessor (more than one CPU)
@@ -75,7 +77,7 @@ package body System.Tasking.Protected_Objects is
    procedure Lock (Object : Protection_Access) is
       Self_Id         : constant Task_Id := Self;
       Caller_Priority : constant Any_Priority := Get_Priority (Self_Id);
-      Old_Enabled : Boolean;
+
    begin
       --  For this run time, pragma Detect_Blocking is always active. As
       --  described in ARM 9.5.1, par. 15, an external call on a protected
@@ -97,13 +99,7 @@ package body System.Tasking.Protected_Objects is
          raise Program_Error;
       end if;
 
-      Set_CPU_Writable_Background_Region (True, Old_Enabled);
       Set_Priority (Self_Id, Object.Ceiling);
-
-      --  Bug fix by jgrivera67@gmail.com
-      --  if Object.Ceiling in Interrupt_Priority then
-      --     System.BB.Board_Support.Set_Current_Priority (Object.Ceiling);
-      --  end if;
 
       --  Locking for multiprocessor systems
 
@@ -132,8 +128,6 @@ package body System.Tasking.Protected_Objects is
 
       Self_Id.Common.Protected_Action_Nesting :=
         Self_Id.Common.Protected_Action_Nesting + 1;
-
-      Set_CPU_Writable_Background_Region (Old_Enabled);
    end Lock;
 
    ------------
@@ -143,7 +137,7 @@ package body System.Tasking.Protected_Objects is
    procedure Unlock (Object : Protection_Access) is
       Self_Id         : constant Task_Id := Self;
       Caller_Priority : constant Any_Priority := Object.Caller_Priority;
-      Old_Enabled : Boolean;
+
    begin
       --  Calls to this procedure can only take place when being within a
       --  protected action and when the caller is the protected object's
@@ -151,8 +145,6 @@ package body System.Tasking.Protected_Objects is
 
       pragma Assert (Self_Id.Common.Protected_Action_Nesting > 0
                      and then Object.Owner = Self_Id);
-
-      Set_CPU_Writable_Background_Region (True, Old_Enabled);
 
       --  Remove ownership of the protected object
 
@@ -173,13 +165,7 @@ package body System.Tasking.Protected_Objects is
          Multiprocessors.Fair_Locks.Unlock (Object.Lock);
       end if;
 
-      --  Bug fix by jgrivera67@gmail.com
-      --  if Object.Ceiling in Interrupt_Priority then
-      --     System.BB.Board_Support.Set_Current_Priority (Caller_Priority);
-      --  end if;
-
       Set_Priority (Self_Id, Caller_Priority);
-      Set_CPU_Writable_Background_Region (Old_Enabled);
    end Unlock;
 
 begin

@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
---          Copyright (C) 1992-2016, Free Software Foundation, Inc.         --
+--          Copyright (C) 1992-2018, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -15,8 +15,13 @@
 -- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
 -- or FITNESS FOR A PARTICULAR PURPOSE.                                     --
 --                                                                          --
--- You should have received a copy of the GNU General Public License along  --
--- with this library; see the file COPYING3. If not, see:                   --
+--                                                                          --
+--                                                                          --
+--                                                                          --
+--                                                                          --
+-- You should have received a copy of the GNU General Public License and    --
+-- a copy of the GCC Runtime Library Exception along with this program;     --
+-- see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see    --
 -- <http://www.gnu.org/licenses/>.                                          --
 --                                                                          --
 -- GNAT was originally developed  by the GNAT team at  New York University. --
@@ -25,9 +30,6 @@
 ------------------------------------------------------------------------------
 
 --  This is the generic bare board version of this package
-
-with System.Task_Primitives.Operations;
-with Memory_Protection;
 
 package body Ada.Synchronous_Task_Control with
   SPARK_Mode => Off
@@ -87,11 +89,8 @@ is
    ---------------
 
    procedure Set_False (S : in out Suspension_Object) is
-      Old_Enabled : Boolean;
    begin
-      Memory_Protection.Set_CPU_Writable_Background_Region (True, Old_Enabled);
       S.Set_False;
-      Memory_Protection.Set_CPU_Writable_Background_Region (Old_Enabled);
    end Set_False;
 
    --------------
@@ -99,11 +98,8 @@ is
    --------------
 
    procedure Set_True (S : in out Suspension_Object) is
-      Old_Enabled : Boolean;
    begin
-      Memory_Protection.Set_CPU_Writable_Background_Region (True, Old_Enabled);
       S.Set_True;
-      Memory_Protection.Set_CPU_Writable_Background_Region (Old_Enabled);
    end Set_True;
 
    ------------------------
@@ -111,11 +107,8 @@ is
    ------------------------
 
    procedure Suspend_Until_True (S : in out Suspension_Object) is
-      Old_Enabled : Boolean;
    begin
-      Memory_Protection.Set_CPU_Writable_Background_Region (True, Old_Enabled);
       S.Wait;
-      Memory_Protection.Set_CPU_Writable_Background_Region (Old_Enabled);
    end Suspend_Until_True;
 
 end Ada.Synchronous_Task_Control;
