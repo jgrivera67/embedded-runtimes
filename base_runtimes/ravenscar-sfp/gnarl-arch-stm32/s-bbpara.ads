@@ -77,6 +77,8 @@ package System.BB.Parameters is
    Has_FPU : constant Boolean := True;
    --  Set to true if core has a FPU
 
+   Use_MPU : constant Boolean := True;
+
    ----------------
    -- Interrupts --
    ----------------
