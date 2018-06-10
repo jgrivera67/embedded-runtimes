@@ -36,6 +36,7 @@
 
 with System.BB.Parameters;
 with System.Machine_Code; use System.Machine_Code;
+with Memory_Protection;
 
 package body System.BB.CPU_Primitives.Context_Switch_Trigger is
 
@@ -57,6 +58,14 @@ package body System.BB.CPU_Primitives.Context_Switch_Trigger is
    pragma Export (Asm, Pend_SV_Handler, "__gnat_pend_sv_trap");
    --  This assembly routine needs to save and restore registers without
    --  interference. The "naked" machine attribute communicates this to GCC.
+
+   procedure Restore_Thread_MPU_Regions;
+   pragma Export (Asm, Restore_Thread_MPU_Regions,
+                  "__restore_thread_mpu_regions");
+
+   procedure Save_Thread_MPU_Regions;
+   pragma Export (Asm, Save_Thread_MPU_Regions,
+                  "__save_thread_mpu_regions");
 
    -------------------------------
    -- Initialize_Context_Switch --
@@ -96,6 +105,21 @@ package body System.BB.CPU_Primitives.Context_Switch_Trigger is
 
       Asm
         (Template =>
+	 --
+         --  Save thread-specific data region descriptors from the MPU for the
+         --  old current task:
+         --
+         --  NOTE: Return with the background region enabled for writing so
+         --  that the Ada runtime can access its data structures:
+         --
+         "push {lr}" & NL &
+         "bl   __save_thread_mpu_regions" & NL &
+         "pop  {lr}" & NL &
+
+         --
+         --  Save CPU context for the old current task:
+         --
+
          "ldr r2,=__gnat_running_thread_table" & NL &
          "mrs  r12, PSP "     & NL & -- Retrieve current PSP
          "ldr  r3, [r2]"      & NL & -- Load address of running context buffer
@@ -127,6 +151,10 @@ package body System.BB.CPU_Primitives.Context_Switch_Trigger is
               "stm  r3!, {r4}"        & NL
          else
               "stm  r3, {r4-r12}"     & NL) & -- Save context
+
+	 --
+         --  Restore CPU context for new current task:
+         --
 
          "ldr  r3,=first_thread_table" & NL &
          "ldr  r3, [r3]"  & NL & -- Load address of new context
@@ -169,8 +197,47 @@ package body System.BB.CPU_Primitives.Context_Switch_Trigger is
          --  Finally, update PSP and perform the exception return
 
          "msr  PSP, r12" & NL &        -- Update PSP
+
+         --
+         --  Restore thread-specific data region descriptors in the MPU for the
+         --  new current task:
+         --
+         --  NOTE: After doing this, the background region msy or may not be
+         --  enabled, depending on the background region state for the new
+         --  thread.
+         --
+         "push {lr}" & NL &
+         "bl   __restore_thread_mpu_regions" & NL &
+         "pop  {lr}" & NL &
+
          "bx   lr",                    -- return to caller
          Volatile => True);
    end Pend_SV_Handler;
+
+      --------------------------------
+   -- Restore_Thread_MPU_Regions --
+   --------------------------------
+
+   procedure Restore_Thread_MPU_Regions
+   is
+      Current_Thread_Descriptor_Ptr : constant Thread_Id :=
+         System.BB.Threads.Thread_Self;
+   begin
+      Memory_Protection.Restore_Thread_MPU_Regions (
+         Current_Thread_Descriptor_Ptr.Thread_Regions);
+   end Restore_Thread_MPU_Regions;
+
+   -----------------------------
+   -- Save_Thread_MPU_Regions --
+   -----------------------------
+
+   procedure Save_Thread_MPU_Regions
+   is
+      Current_Thread_Descriptor_Ptr : constant Thread_Id :=
+         System.BB.Threads.Thread_Self;
+   begin
+      Memory_Protection.Save_Thread_MPU_Regions (
+         Current_Thread_Descriptor_Ptr.Thread_Regions);
+   end Save_Thread_MPU_Regions;
 
 end System.BB.CPU_Primitives.Context_Switch_Trigger;

@@ -43,6 +43,7 @@ with System.BB.Parameters;
 with System.BB.Threads.Queues;
 with System.BB.Timing_Events;
 with System.Multiprocessors.Fair_Locks;
+with Memory_Protection;
 
 package body System.BB.Time is
 
@@ -52,6 +53,7 @@ package body System.BB.Time is
    use System.Multiprocessors;
    use System.Multiprocessors.Fair_Locks;
    use Threads, Threads.Queues;
+   use Memory_Protection;
 
    -----------------------
    -- Local definitions --
@@ -131,7 +133,7 @@ package body System.BB.Time is
 
       Now             : Time;
       Next_Alarm      : Time; -- Time
-
+      Old_Enabled     : Boolean;
    begin
       --  Make sure there is an alarm pending.
 
@@ -142,6 +144,7 @@ package body System.BB.Time is
       --  The access to the queues must be protected
 
       Protection.Enter_Kernel;
+      Set_CPU_Writable_Background_Region (True, Old_Enabled);
 
       --  Reset Pending_Alarm before computing the next alarm time, as other
       --  processors may set alarms concurrently, and these alarms would be
@@ -208,6 +211,7 @@ package body System.BB.Time is
       Next_Alarm := Time'Min (Get_Next_Timeout (Current_CPU), Next_Alarm);
       Update_Alarm (Next_Alarm);
 
+      Set_CPU_Writable_Background_Region (Old_Enabled);
       Protection.Leave_Kernel;
    end Alarm_Handler;
 
@@ -324,7 +328,7 @@ package body System.BB.Time is
       Now               : Time;
       Self              : Thread_Id;
       Inserted_As_First : Boolean;
-
+      Old_Enabled : Boolean;
    begin
       Protection.Enter_Kernel;
 
@@ -333,6 +337,8 @@ package body System.BB.Time is
       Self := Thread_Self;
 
       pragma Assert (Self.State = Runnable);
+
+      Set_CPU_Writable_Background_Region (True, Old_Enabled);
 
       --  Test if the alarm time is in the future
 
@@ -361,6 +367,7 @@ package body System.BB.Time is
          Yield (Self);
       end if;
 
+      Set_CPU_Writable_Background_Region (Old_Enabled);
       Protection.Leave_Kernel;
    end Delay_Until;
 

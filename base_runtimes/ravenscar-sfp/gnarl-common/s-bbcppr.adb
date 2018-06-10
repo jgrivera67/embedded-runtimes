@@ -39,6 +39,7 @@ with System.BB.Threads;
 with System.BB.Threads.Queues;
 with System.Machine_Code; use System.Machine_Code;
 with System.BB.CPU_Primitives.Context_Switch_Trigger;
+with Memory_Protection;
 
 package body System.BB.CPU_Primitives is
    use Board_Support;
@@ -353,6 +354,7 @@ package body System.BB.CPU_Primitives is
    procedure Sys_Tick_Handler is
       Max_Alarm_Interval : constant Timer_Interval := Timer_Interval'Last / 2;
       Now : constant Timer_Interval := Timer_Interval (Read_Clock);
+      Old_Enabled : Boolean;
 
    begin
       --  The following allows max. efficiency for "useless" tick interrupts
@@ -364,7 +366,9 @@ package body System.BB.CPU_Primitives is
          return;
       end if;
 
+      Memory_Protection.Set_CPU_Writable_Background_Region (True, Old_Enabled);
       Alarm_Time := Now + Max_Alarm_Interval;
+      Memory_Protection.Set_CPU_Writable_Background_Region (Old_Enabled);
 
       --  Call the alarm handler
 

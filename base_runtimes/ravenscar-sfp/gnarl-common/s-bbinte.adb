@@ -44,6 +44,7 @@ with System.BB.Threads;
 with System.BB.Threads.Queues;
 with System.BB.Board_Support;
 with System.BB.Time;
+with Memory_Protection;
 
 package body System.BB.Interrupts is
 
@@ -51,6 +52,7 @@ package body System.BB.Interrupts is
    use System.BB.Board_Support.Multiprocessors;
    use System.BB.Threads;
    use System.BB.Time;
+   use Memory_Protection;
 
    ----------------
    -- Local data --
@@ -166,8 +168,11 @@ package body System.BB.Interrupts is
       Previous_Int    : constant Any_Interrupt_ID :=
                           Interrupt_Being_Handled (CPU_Id);
       Prev_In_Interr  : constant Boolean := Self_Id.In_Interrupt;
+      Old_Enabled     : Boolean;
 
    begin
+      Set_CPU_Writable_Background_Region (True, Old_Enabled);
+
       --  Update execution time for the interrupted task
 
       if Scheduling_Event_Hook /= null then
@@ -198,11 +203,13 @@ package body System.BB.Interrupts is
       Threads.Queues.Change_Priority (Self_Id, Int_Priority);
 
       CPU_Primitives.Enable_Interrupts (Int_Priority);
+      Set_CPU_Writable_Background_Region (False);
 
       --  Call the user handler
 
       Interrupt_Handlers_Table (Id).all (Id);
 
+      Set_CPU_Writable_Background_Region (True);
       CPU_Primitives.Disable_Interrupts;
 
       --  Update execution time for the interrupt. This must be done before
@@ -236,6 +243,7 @@ package body System.BB.Interrupts is
       --  be set by Leave_Kernel.
 
       Board_Support.Interrupts.Set_Current_Priority (Caller_Priority);
+      Set_CPU_Writable_Background_Region (Old_Enabled);
    end Interrupt_Wrapper;
 
    ----------------------------
