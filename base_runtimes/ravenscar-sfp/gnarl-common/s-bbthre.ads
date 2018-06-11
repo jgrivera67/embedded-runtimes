@@ -47,6 +47,7 @@ with System.Multiprocessors;
 with Memory_Protection;
 
 package System.BB.Threads is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
 
    use type System.Multiprocessors.CPU;

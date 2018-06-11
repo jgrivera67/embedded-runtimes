@@ -27,6 +27,7 @@
 ------------------------------------------------------------------------------
 
 package System.Multiprocessors.Spin_Locks is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
 
    ---------------

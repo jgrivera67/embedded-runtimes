@@ -37,6 +37,7 @@ generic
    type Object (<>) is limited private;
 
 package System.Address_To_Access_Conversions is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
 
    pragma Compile_Time_Warning

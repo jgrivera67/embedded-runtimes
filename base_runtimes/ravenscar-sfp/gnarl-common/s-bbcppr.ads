@@ -37,6 +37,7 @@ with System;
 with System.BB.Parameters;
 
 package System.BB.CPU_Primitives is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
 
    type Word is mod 2**System.Word_Size;

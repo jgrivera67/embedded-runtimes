@@ -40,6 +40,7 @@
 pragma Compiler_Unit_Warning;
 
 package System.Storage_Elements is
+   pragma No_Elaboration_Code_All;
    pragma Pure;
    --  Note that we take advantage of the implementation permission to make
    --  this unit Pure instead of Preelaborable; see RM 13.7.1(15). In Ada 2005,

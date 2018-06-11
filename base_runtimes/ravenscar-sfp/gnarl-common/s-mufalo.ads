@@ -29,6 +29,7 @@
 with System.Multiprocessors.Spin_Locks;
 
 package System.Multiprocessors.Fair_Locks is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
 
    --  Note: The locks implemented in this package are fair among CPUs. Using

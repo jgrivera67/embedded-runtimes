@@ -34,6 +34,7 @@
 --  operations required in Text_IO.Integer_IO for such types.
 
 package System.Img_Int is
+   pragma No_Elaboration_Code_All;
    pragma Pure;
 
    procedure Image_Integer

@@ -27,7 +27,7 @@
 
 pragma Restrictions (No_Elaboration_Code);
 
-with System; use System;
+with System;
 with System.BB.Parameters;
 with Interfaces; use Interfaces;
 with Interfaces.Bit_Types; use Interfaces.Bit_Types;
@@ -37,6 +37,7 @@ with Interfaces.Bit_Types; use Interfaces.Bit_Types;
 --  (ARM Cortex M4F) microcontrollers from NXP.
 --
 package Kinetis_K64F is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
 
    type Bytes_Array is array (Positive range <>) of Byte;
@@ -145,7 +146,7 @@ package Kinetis_K64F is
       "First IRQ number must be 0");
    pragma Compile_Time_Error
      (External_Interrupt_Type'Pos (ENET_Error_IRQ) /=
-      System.BB.Parameters.Number_Of_Interrupt_ID - 2,
+      System.BB.Parameters.Interrupt_Range'Last - 2,
       "Last IRQ number is wrong");
 
 end Kinetis_K64F;

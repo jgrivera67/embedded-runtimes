@@ -47,6 +47,7 @@
 --  otherwise the relinking and rebinding capability would be deactivated.
 
 package System.Parameters is
+   pragma No_Elaboration_Code_All;
    pragma Pure;
 
    ---------------------------------------

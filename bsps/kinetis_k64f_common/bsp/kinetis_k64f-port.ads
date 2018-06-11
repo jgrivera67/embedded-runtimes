@@ -31,7 +31,9 @@ pragma Restrictions (No_Elaboration_Code);
 --  @summary Register definitions for the Kinetis K64F's PORT hardware block
 --
 package Kinetis_K64F.PORT is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
+   use System;
 
    --  PCR - Pin Control Register
    type PCR_Type is record

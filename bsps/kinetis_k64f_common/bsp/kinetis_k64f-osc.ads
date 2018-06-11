@@ -31,7 +31,9 @@ pragma Restrictions (No_Elaboration_Code);
 --  @summary Register definitions for the Kinetis K64F's OSC hardware block
 --
 package Kinetis_K64F.OSC is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
+   use System;
 
    --  CR - OSC Control Register
    type CR_Type is record

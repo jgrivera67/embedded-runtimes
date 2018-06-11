@@ -43,6 +43,7 @@ with System;
 with System.BB.Parameters;
 
 package System.BB.Interrupts is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
 
    subtype Interrupt_ID is System.BB.Parameters.Interrupt_Range;

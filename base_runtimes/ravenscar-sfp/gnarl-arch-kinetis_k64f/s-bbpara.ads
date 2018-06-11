@@ -38,11 +38,13 @@
 
 --  This is the Kinetis K64F (ARMv7) version of this package
 
-pragma Restrictions (No_Elaboration_Code);
+--  pragma Restrictions (No_Elaboration_Code);
 
 with Microcontroller_Clocks;
+with System.BB.MCU_Parameters;
 
 package System.BB.Parameters is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate (System.BB.Parameters);
 
    Clock_Frequency : constant := Microcontroller_Clocks.Cpu_Clock_Frequency;
@@ -50,6 +52,12 @@ package System.BB.Parameters is
    Ticks_Per_Second : constant := Clock_Frequency;
 
    Has_FPU : constant Boolean := True;
+
+   Has_VTOR : constant Boolean := True;
+
+   Has_OS_Extensions : constant Boolean := True;
+
+   Is_ARMv6m : constant Boolean := False;
 
    Use_Watchdog_Timer : constant Boolean := False;
 
@@ -62,10 +70,9 @@ package System.BB.Parameters is
    --  These definitions are in this package in order to isolate target
    --  dependencies.
 
-   Number_Of_Interrupt_ID : constant := 87;
-   --  Number of interrupts (for both the interrupt controller and the
-   --  Sys_Tick_Trap). This static constant is used to declare a type, and
-   --  the handler table.
+   subtype Interrupt_Range is Integer
+     range -1 .. MCU_Parameters.Number_Of_Interrupts;
+   --  Number of interrupts for the interrupt controller
 
    Trap_Vectors : constant := 17;
    --  While on this target there is little difference between interrupts

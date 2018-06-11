@@ -31,8 +31,7 @@ with Kinetis_K64F.SCS;
 with System.Text_IO.Extended;
 with System.BB.Threads;
 with System.Multiprocessors;
-with System.BB.CPU_Primitives.Multiprocessors;
-with Ada.Unchecked_Conversion;
+with System.BB.Board_Support;
 with System.Address_To_Access_Conversions;
 
 package body Memory_Protection is
@@ -227,9 +226,9 @@ package body Memory_Protection is
 
    procedure Restore_Cpu_Interrupts (Old_Primask : Word);
 
-   function EDR_Register_To_Unsigned_32 is
-     new Ada.Unchecked_Conversion (Source => EDR_Register_Type,
-                                   Target => Unsigned_32);
+   --  function EDR_Register_To_Unsigned_32 is
+   --    new Ada.Unchecked_Conversion (Source => EDR_Register_Type,
+   --                                  Target => Unsigned_32);
 
    package Address_To_Thread_Id is new
       System.Address_To_Access_Conversions (
@@ -463,9 +462,9 @@ package body Memory_Protection is
             " (" & (if EDR.ERW = 0 then "read" else "write"));
          System.Text_IO.Extended.Put_String ("), fault in regions ");
          Dump_EACD_Field (EDR.EACD);
-         System.Text_IO.Extended.Put_String (" (EDR value=");
-         System.Text_IO.Extended.Print_Uint32_Hexadecimal (
-            EDR_Register_To_Unsigned_32 (EDR));
+         --  System.Text_IO.Extended.Put_String (" (EDR value=");
+         --  System.Text_IO.Extended.Print_Uint32_Hexadecimal (
+         --     EDR_Register_To_Unsigned_32 (EDR));
          System.Text_IO.Extended.Put_String (")" & ASCII.LF);
       end Dump_EDR_Register;
 
@@ -1020,7 +1019,7 @@ package body Memory_Protection is
 
       pragma Assert (Memory_Protection_Var.Initialized);
       --  For now we only support systems with one CPU core
-      pragma Assert (System.BB.CPU_Primitives.Multiprocessors.Current_CPU =
+      pragma Assert (System.BB.Board_Support.Multiprocessors.Current_CPU =
                      CPU'First);
 
       Restore_MPU_Region_Descriptor (

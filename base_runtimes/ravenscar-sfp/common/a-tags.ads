@@ -72,6 +72,7 @@ with System;
 with System.Storage_Elements;
 
 package Ada.Tags is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
    --  In accordance with Ada 2005 AI-362
 

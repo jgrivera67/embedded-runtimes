@@ -41,8 +41,6 @@ with System.BB.Interrupts;
 with System.BB.Protection;
 with System.BB.Threads.Queues;
 
-with Ada.Unchecked_Conversion;
-
 package body System.BB.Threads is
 
    use System.Multiprocessors;
@@ -52,8 +50,6 @@ package body System.BB.Threads is
    use Board_Support;
    use Memory_Protection;
 
-   use type System.Address;
-   use type System.Parameters.Size_Type;
    use type System.Storage_Elements.Storage_Offset;
 
    procedure Initialize_Thread
@@ -240,7 +236,7 @@ package body System.BB.Threads is
       --  Then the devices
 
       Board_Support.Initialize_Board;
-      Time.Initialize_Timers;
+      System.BB.Time.Initialize_Timers;
 
       --  Initialize internal queues and the environment task
 

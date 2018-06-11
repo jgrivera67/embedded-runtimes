@@ -35,6 +35,7 @@
 pragma Restrictions (No_Elaboration_Code);
 
 package System.BB.CPU_Specific is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
 
    Stack_Alignment : constant := 8;

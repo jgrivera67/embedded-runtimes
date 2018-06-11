@@ -31,7 +31,9 @@ pragma Restrictions (No_Elaboration_Code);
 --  @summary Register definitions for the Kinetis K64F's PMC hardware block
 --
 package Kinetis_K64F.PMC is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
+   use System;
 
    --  LVDSC1 - Low Voltage Detect Status And Control 1 register
    type LVDSC1_Type is record

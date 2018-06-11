@@ -39,8 +39,10 @@ with System;
 
 --  System Control Space
 package Kinetis_K64F.SCS is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
    pragma SPARK_Mode (Off);
+   use System;
 
    ---------------
    -- Registers --

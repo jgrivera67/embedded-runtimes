@@ -39,6 +39,7 @@ with System.BB.Board_Support;
 with System.Multiprocessors;
 
 package System.BB.Threads.Queues is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
 
    use type System.BB.Time.Time;

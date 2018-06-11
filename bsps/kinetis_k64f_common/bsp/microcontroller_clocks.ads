@@ -27,6 +27,7 @@
 pragma Restrictions (No_Elaboration_Code);
 
 package Microcontroller_Clocks is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
 
    type Hertz_Type is range 1 .. 1_000_000_000;

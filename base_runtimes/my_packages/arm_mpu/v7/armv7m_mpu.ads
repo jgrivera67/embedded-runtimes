@@ -39,6 +39,7 @@ with System;
 --  @summary ARMv7-M MPU registers
 --
 package ARMv7M_MPU is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
 
    use System;

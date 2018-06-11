@@ -31,7 +31,9 @@ pragma Restrictions (No_Elaboration_Code);
 --  @summary Register definitions for the Kinetis K64F's UART hardware block
 --
 package Kinetis_K64F.UART is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
+   use System;
 
    type Encoded_Baud_Rate_Type is record
       Low_Part : Byte;

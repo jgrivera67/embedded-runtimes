@@ -32,6 +32,7 @@ pragma Ada_2012;
 --  @summary Register definitions for the Kinetis K64F's MPU hardware block
 --
 package Kinetis_K64F.MPU is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
    pragma SPARK_Mode (Off);
 

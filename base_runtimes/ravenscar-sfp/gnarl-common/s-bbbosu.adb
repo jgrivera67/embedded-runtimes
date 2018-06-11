@@ -193,7 +193,7 @@ package body System.BB.Board_Support is
          Flag    : Boolean;
          Count   : Timer_Interval;
          Res     : Timer_Interval;
-	 Old_Enabled : Boolean;
+         Old_Enabled : Boolean;
 
       begin
          --  As several registers and variables need to be read or modified, do
@@ -235,10 +235,10 @@ package body System.BB.Board_Support is
             --  once.
 
             Res := Next_Tick_Time;
-	    Memory_Protection.Set_CPU_Writable_Background_Region (True,
-								  Old_Enabled);
+            Memory_Protection.Set_CPU_Writable_Background_Region (True,
+                                                                  Old_Enabled);
             Next_Tick_Time := Next_Tick_Time + Tick_Period;
-	    Memory_Protection.Set_CPU_Writable_Background_Region (Old_Enabled);
+            Memory_Protection.Set_CPU_Writable_Background_Region (Old_Enabled);
 
          else
             --  The counter is decremented, so compute the actual time

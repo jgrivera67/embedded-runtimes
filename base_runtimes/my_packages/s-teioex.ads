@@ -28,6 +28,7 @@
 with Interfaces;
 
 package System.Text_IO.Extended is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
 
    procedure Put_String (Str : String);

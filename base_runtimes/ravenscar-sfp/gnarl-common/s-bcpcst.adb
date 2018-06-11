@@ -35,10 +35,14 @@
 ------------------------------------------------------------------------------
 
 with System.BB.Parameters;
-with System.Machine_Code; use System.Machine_Code;
+with System.BB.Threads;
+with System.Machine_Code;
+with System.OS_Interface;
 with Memory_Protection;
 
 package body System.BB.CPU_Primitives.Context_Switch_Trigger is
+   use System.Machine_Code;
+   use System.OS_Interface;
 
    NL : constant String := ASCII.LF & ASCII.HT;
    --  New line separator in Asm templates
@@ -105,7 +109,7 @@ package body System.BB.CPU_Primitives.Context_Switch_Trigger is
 
       Asm
         (Template =>
-	 --
+         --
          --  Save thread-specific data region descriptors from the MPU for the
          --  old current task:
          --
@@ -152,7 +156,7 @@ package body System.BB.CPU_Primitives.Context_Switch_Trigger is
          else
               "stm  r3, {r4-r12}"     & NL) & -- Save context
 
-	 --
+         --
          --  Restore CPU context for new current task:
          --
 

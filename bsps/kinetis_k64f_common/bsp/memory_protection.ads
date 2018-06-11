@@ -41,6 +41,7 @@ private with Kinetis_K64F.MPU;
 --
 package Memory_Protection is
    pragma SPARK_Mode (Off);
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
 
    use System.Storage_Elements;

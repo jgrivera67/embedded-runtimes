@@ -35,6 +35,7 @@ with System.Parameters;
 with System.Storage_Elements;
 
 package System.Secondary_Stack is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
 
    package SP renames System.Parameters;

@@ -31,7 +31,9 @@ pragma Restrictions (No_Elaboration_Code);
 --  @summary Register definitions for the Kinetis K64F's SIM hardware block
 --
 package Kinetis_K64F.SIM is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
+   use System;
 
    --  SOPT1 - System Options Register 1
    type SOPT1_Type is record

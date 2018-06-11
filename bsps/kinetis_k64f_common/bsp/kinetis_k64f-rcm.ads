@@ -32,6 +32,7 @@ pragma Restrictions (No_Elaboration_Code);
 --
 package Kinetis_K64F.RCM is
    pragma Preelaborate;
+   use System;
 
    --  SRS0 - System Reset Status Register 0
    type SRS0_Type is record

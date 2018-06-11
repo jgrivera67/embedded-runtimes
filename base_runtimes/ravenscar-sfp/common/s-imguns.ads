@@ -36,6 +36,7 @@
 with System.Unsigned_Types;
 
 package System.Img_Uns is
+   pragma No_Elaboration_Code_All;
    pragma Pure;
 
    procedure Image_Unsigned

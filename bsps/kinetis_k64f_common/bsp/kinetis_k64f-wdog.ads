@@ -32,6 +32,7 @@ pragma Restrictions (No_Elaboration_Code);
 --
 package Kinetis_K64F.WDOG is
    pragma Preelaborate;
+   use System;
 
    --   STCTRLH - Watchdog Status and Control Register High
    type STCTRLH_Type is record

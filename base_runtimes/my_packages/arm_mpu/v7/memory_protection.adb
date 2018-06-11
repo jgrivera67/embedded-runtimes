@@ -28,9 +28,9 @@
 with System.BB.Parameters;
 with System.Machine_Code;
 with System.Text_IO.Extended;
+with System.BB.Board_Support;
 with System.BB.Threads;
 with System.Multiprocessors;
-with System.BB.CPU_Primitives.Multiprocessors;
 with System.Address_To_Access_Conversions;
 
 package body Memory_Protection is
@@ -868,7 +868,7 @@ package body Memory_Protection is
 
       pragma Assert (Memory_Protection_Var.Initialized);
       --  For now we only support systems with one CPU core
-      pragma Assert (System.BB.CPU_Primitives.Multiprocessors.Current_CPU =
+      pragma Assert (System.BB.Board_Support.Multiprocessors.Current_CPU =
                      CPU'First);
 
       Restore_MPU_Region_Descriptor (

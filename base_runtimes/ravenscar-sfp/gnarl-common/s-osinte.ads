@@ -48,6 +48,7 @@ with System.BB.Board_Support;
 with System.BB.Parameters;
 
 package System.OS_Interface is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
 
    ----------------

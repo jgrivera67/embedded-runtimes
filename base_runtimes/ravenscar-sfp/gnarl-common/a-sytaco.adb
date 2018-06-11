@@ -31,7 +31,6 @@
 
 --  This is the generic bare board version of this package
 
-with System.Task_Primitives.Operations;
 with Memory_Protection;
 
 package body Ada.Synchronous_Task_Control with

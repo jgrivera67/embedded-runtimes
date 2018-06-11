@@ -40,6 +40,7 @@
 with System;
 
 package Ada.Exceptions is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
    --  In accordance with Ada 2005 AI-362
 

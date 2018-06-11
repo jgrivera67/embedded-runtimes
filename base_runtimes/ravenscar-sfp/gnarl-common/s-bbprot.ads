@@ -40,6 +40,7 @@
 pragma Restrictions (No_Elaboration_Code);
 
 package System.BB.Protection is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
 
    Wakeup_Served_Entry_Callback : access procedure := null;

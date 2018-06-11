@@ -45,6 +45,7 @@ with System.BB.Interrupts;
 with System.BB.Time;
 
 package System.BB.Board_Support is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
 
    -----------------------------

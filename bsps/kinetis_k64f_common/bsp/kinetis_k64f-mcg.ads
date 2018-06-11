@@ -31,7 +31,9 @@ pragma Restrictions (No_Elaboration_Code);
 --  @summary Register definitions for the Kinetis K64F's MCG hardware block
 --
 package Kinetis_K64F.MCG is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
+   use System;
 
    --  C1 - MCG Control 1 Register
    type C1_Type is record

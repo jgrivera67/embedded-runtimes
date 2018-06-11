@@ -30,6 +30,7 @@ with System.BB.Time;
 with System.Multiprocessors;
 
 package System.Bb.Timing_Events is
+   pragma No_Elaboration_Code_All;
    pragma Preelaborate;
 
    type Timing_Event;
