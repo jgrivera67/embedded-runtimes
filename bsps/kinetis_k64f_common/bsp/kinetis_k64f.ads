@@ -146,7 +146,7 @@ package Kinetis_K64F is
       "First IRQ number must be 0");
    pragma Compile_Time_Error
      (External_Interrupt_Type'Pos (ENET_Error_IRQ) /=
-      System.BB.Parameters.Interrupt_Range'Last - 2,
+      System.BB.Parameters.Interrupt_Range'Last,
       "Last IRQ number is wrong");
 
 end Kinetis_K64F;
