@@ -15,14 +15,14 @@ project Ravenscar_Build is
         for Library_Dir use "sfp/adalib";
         for Object_Dir use "sfp/obj";
 
-        for Source_Dirs use ("../bsps/kinetis_k64f_frdm/gnarl-bsp",
+        for Source_Dirs use ("../bsps/kinetis_k64f_common/gnarl-bsp",
                              "../base_runtimes/ravenscar-sfp/gnarl-common",
                              "../base_runtimes/ravenscar-sfp/gnarl-arch-kinetis_k64f");
      when "ravenscar-full" =>
         for Library_Dir use "full/adalib";
         for Object_Dir use "full/obj";
 
-        for Source_Dirs use ("../bsps/kinetis_k64f_frdm/gnarl-bsp",
+        for Source_Dirs use ("../bsps/kinetis_k64f_common/gnarl-bsp",
                              "../base_runtimes/ravenscar-full/gnarl-common",
                              "../base_runtimes/ravenscar-full/gnarl-arch-kinetis_k64f");
   end case;
